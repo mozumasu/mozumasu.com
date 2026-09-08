@@ -11,6 +11,26 @@
 - `wrangler.jsonc` — Cloudflare Workers (静的アセットのみ、Worker スクリプトなし)。カスタムドメイン `mozumasu.com`
 - `.github/workflows/deploy.yml` — main への push で `wrangler deploy`
 
+## 最近の活動 (Recent) の追加
+
+`public/activities.json` に 1 件ずつ手で追加する。ページは新しい順に並べ、最初の 8 件だけ表示して残りは「すべて見る」で開く。日付が未来のものには upcoming が付く。
+
+```json
+{
+  "date": "2026-09-09",
+  "type": "talk",
+  "title": "CLIオタクのキーボード事情",
+  "venue": "MOSH Tech Meetup #5",
+  "url": "https://talks.mozumasu.com/terminal-keyboard/",
+  "event": "https://mosh.connpass.com/event/400858/",
+  "thumb": "https://talks.mozumasu.com/terminal-keyboard/cover.png"
+}
+```
+
+- `type`: `talk` (登壇) / `video` (出演) / `article` (記事) / `event` (主催)
+- `venue`, `event`, `thumb`, `emoji` は任意。`thumb` がないものは `emoji` (なければ 🐱) のタイルになる
+- `thumb` は `pnpm thumbs` で埋められる。リンク先の og:image を取り、YouTube は動画 ID から固定 URL を組む。connpass / docswell / Zenn / YouTube で動作確認済み
+
 ## ローカル確認
 
 ```sh
