@@ -48,9 +48,8 @@
   .grain svg { width: 100%; height: 100%; }
 
   /* ---- page ---- */
-  /* minmax(0, 1fr): a grid track defaults to min-content, which would let the one-word h1 widen the whole page */
-  .page { position: relative; z-index: 1; min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
-  header, footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 36px 52px;
+  .page { position: relative; z-index: 1; min-height: 100dvh; display: flex; flex-direction: column; }
+  header, footer { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 36px 52px;
     font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; text-shadow: 0 1px 3px rgba(4,50,60,0.7), 0 2px 16px var(--shadow); }
   footer { padding-top: 24px; }
   .brand { display: flex; gap: 10px; align-items: center; font-weight: 500; }
@@ -58,7 +57,7 @@
   nav.top { display: flex; gap: 0.6em; }
   nav.top a:hover, footer a:hover { text-decoration: underline; text-underline-offset: 4px; }
 
-  .hero { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px 20px 40px; }
+  .hero { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px 20px 40px; }
   .avatar { width: 200px; height: 200px; }
   /* keep this a bare <img>: a CSS filter or mask here leaves a faint box on GPU compositing.
      top/bottom fades are baked into the PNG alpha instead */
