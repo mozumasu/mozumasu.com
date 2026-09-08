@@ -48,7 +48,9 @@
   .grain svg { width: 100%; height: 100%; }
 
   /* ---- page ---- */
-  .page { position: relative; z-index: 1; min-height: 100dvh; display: flex; flex-direction: column; }
+  .page { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+  /* header + hero always fill the first screen; the activity section starts below the fold */
+  .fold { min-height: 100dvh; display: flex; flex-direction: column; }
   header, footer { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 36px 52px;
     font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; text-shadow: 0 1px 3px rgba(4,50,60,0.7), 0 2px 16px var(--shadow); }
   footer { padding-top: 24px; }
@@ -57,7 +59,7 @@
   nav.top { display: flex; gap: 0.6em; }
   nav.top a:hover, footer a:hover { text-decoration: underline; text-underline-offset: 4px; }
 
-  .hero { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px 20px 40px; }
+  .hero { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-content: safe center; text-align: center; padding: 24px 20px 40px; }
   .avatar { width: 200px; height: 200px; }
   /* keep this a bare <img>: a CSS filter or mask here leaves a faint box on GPU compositing.
      top/bottom fades are baked into the PNG alpha instead */
@@ -93,9 +95,43 @@
   .depth i { width: 14px; height: 1px; background: rgba(255,255,255,0.6); }
   .depth .on { color: #fff; } .depth .on i { width: 28px; background: #fff; }
 
+  /* ---- recent activity ---- */
+  .recent { padding: 24px 52px 96px; }
+  .recent .head { max-width: 1120px; margin: 0 auto 28px; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .recent h2 { font-family: var(--font-d); font-variation-settings: "wdth" 130; font-weight: 800; font-size: 30px; letter-spacing: 0.02em; text-transform: uppercase; text-shadow: 0 2px 0 rgba(255,255,255,0.3), 0 12px 30px rgba(4,50,60,0.4); }
+  .recent .head small { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mute); text-shadow: 0 1px 12px var(--shadow); }
+  .cards { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+  .card { display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; color: #fff;
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.5);
+    backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 14px 34px rgba(4,50,60,0.28);
+    transition: transform 0.25s ease, background 0.25s ease; }
+  .card:hover { transform: translateY(-3px); background: rgba(255,255,255,0.24); }
+  .card.hidden { display: none; }
+  .thumb { position: relative; aspect-ratio: 16 / 9; background: rgba(4,50,60,0.25); overflow: hidden; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .emoji { width: 100%; height: 100%; display: grid; place-items: center; font-size: 56px; background: linear-gradient(160deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08)); }
+  .badge { position: absolute; left: 10px; top: 10px; padding: 4px 8px; border-radius: 999px; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500;
+    background: rgba(4,50,60,0.55); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .badge.upcoming { left: auto; right: 10px; background: #fff; color: var(--deep); }
+  .card .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .card .meta { display: flex; gap: 10px; align-items: baseline; font-size: 10px; letter-spacing: 0.12em; color: rgba(255,255,255,0.85); text-transform: uppercase; }
+  .card .meta .venue { text-transform: none; letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card h3 { font-family: var(--font-j); font-size: 15px; font-weight: 500; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .more { max-width: 1120px; margin: 28px auto 0; display: flex; justify-content: center; }
+  .more button { font: inherit; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #fff; cursor: pointer;
+    padding: 14px 28px; border-radius: 999px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.55);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 10px 26px rgba(4,50,60,0.28); }
+  .more button:hover { background: rgba(255,255,255,0.28); }
+
   @media (max-width: 900px) { .depth { display: none; } }
   @media (max-width: 640px) {
     header, footer { padding: 22px 20px; font-size: 10px; letter-spacing: 0.14em; }
+    .recent { padding: 8px 16px 64px; }
+    .cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card .body { padding: 10px 12px 12px; }
+    .card h3 { font-size: 13px; }
+    .thumb .emoji { font-size: 40px; }
     header { flex-direction: column; align-items: flex-start; gap: 12px; }
     footer { flex-direction: column; align-items: center; gap: 8px; text-align: center; }
     .avatar { width: 150px; height: 150px; }
@@ -106,7 +142,8 @@
   }
   @media (prefers-reduced-motion: reduce) { .tile { transition: none; } }
   /* ?og=1: composition for the OGP image */
-  body.og header, body.og footer, body.og .tiles, body.og .depth { display: none; }
+  body.og header, body.og footer, body.og .tiles, body.og .depth, body.og .recent { display: none; }
+  body.og .page { min-height: 0; }
   body.og .hero { padding: 0 20px; }
 </style>
 </head>
@@ -115,6 +152,7 @@
   <div class="scrim bg" aria-hidden="true"></div>
 
   <div class="page">
+    <div class="fold">
     <header>
       <a class="brand" href="/"><img src="/icon.png" alt="" width="28" height="28"><span>mozumasu</span></a>
       <nav class="top" aria-label="links">
@@ -137,6 +175,13 @@
         <a class="tile" href="https://github.com/mozumasu" rel="me">GitHub <small>mozumasu</small></a>
       </nav>
     </main>
+    </div>
+
+    <section class="recent" id="recent" hidden>
+      <div class="head"><h2>Recent</h2><small>登壇 · 出演 · 記事</small></div>
+      <div class="cards" id="cards"></div>
+      <div class="more" id="more" hidden><button type="button" id="more-btn">すべて見る</button></div>
+    </section>
 
     <footer>
       <div>© 2026 mozumasu</div>
@@ -147,6 +192,40 @@
   <div class="depth" aria-hidden="true"><div>0.5 m<i></i></div><div>1.0<i></i></div><div class="on">1.5 m · here<i></i></div><div>2.0<i></i></div></div>
   <div class="grain bg" aria-hidden="true"><svg><filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#g)"/></svg></div>
 
+<script>
+  // recent activity cards from /activities.json (hand-maintained; see README)
+  (async () => {
+    const LABEL = { talk: "登壇", video: "出演", article: "記事", event: "主催" };
+    const INITIAL = 8;
+    let items;
+    try { items = await (await fetch("/activities.json")).json(); } catch { return; }
+    if (!Array.isArray(items) || items.length === 0) return;
+    items.sort((a, b) => (a.date < b.date ? 1 : -1));
+    const today = new Date().toISOString().slice(0, 10);
+    const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const cards = document.getElementById("cards");
+    cards.innerHTML = items.map((it, i) => {
+      const thumb = it.thumb
+        ? `<img src="${esc(it.thumb)}" alt="" loading="lazy" decoding="async">`
+        : `<div class="emoji" aria-hidden="true">${esc(it.emoji || "🐱")}</div>`;
+      const upcoming = it.date > today ? `<span class="badge upcoming">upcoming</span>` : "";
+      const venue = it.venue ? `<span class="venue">${esc(it.venue)}</span>` : "";
+      return `<a class="card${i >= INITIAL ? " hidden" : ""}" href="${esc(it.url)}">
+        <div class="thumb">${thumb}<span class="badge">${LABEL[it.type] || esc(it.type)}</span>${upcoming}</div>
+        <div class="body"><div class="meta"><time datetime="${esc(it.date)}">${esc(it.date.replace(/-/g, "."))}</time>${venue}</div><h3>${esc(it.title)}</h3></div>
+      </a>`;
+    }).join("");
+    document.getElementById("recent").hidden = false;
+    if (items.length > INITIAL) {
+      const more = document.getElementById("more");
+      more.hidden = false;
+      document.getElementById("more-btn").addEventListener("click", () => {
+        cards.querySelectorAll(".card.hidden").forEach((el) => el.classList.remove("hidden"));
+        more.hidden = true;
+      });
+    }
+  })();
+</script>
 <script id="frag" type="x-shader/x-fragment">
 precision highp float;
 uniform vec2 u_res;

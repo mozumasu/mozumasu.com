@@ -1,0 +1,226 @@
+[
+  {
+    "date": "2026-10-15",
+    "type": "talk",
+    "title": "Terminal Night 3",
+    "venue": "吉祥寺.pm",
+    "url": "https://kichijojipm.connpass.com/event/404746/",
+    "thumb": "https://media.connpass.com/thumbs/c0/7d/c07dd16257f46a59b001cc79dcb3fc96.png"
+  },
+  {
+    "date": "2026-09-09",
+    "type": "talk",
+    "title": "CLIオタクのキーボード事情",
+    "venue": "MOSH Tech Meetup #5",
+    "url": "https://talks.mozumasu.com/terminal-keyboard/",
+    "event": "https://mosh.connpass.com/event/400858/",
+    "thumb": "https://talks.mozumasu.com/terminal-keyboard/cover.png"
+  },
+  {
+    "date": "2026-08-27",
+    "type": "video",
+    "title": "SREが向き合うセキュリティと\"モテるターミナル\"",
+    "venue": "GMO Flatt Security",
+    "url": "https://youtu.be/0lAZ3C_7oWU",
+    "thumb": "https://i.ytimg.com/vi/0lAZ3C_7oWU/hqdefault.jpg"
+  },
+  {
+    "date": "2026-07-17",
+    "type": "talk",
+    "title": "学生向けハンズオン〜イケてるターミナルをつくろう！〜",
+    "venue": "Findy",
+    "url": "https://findy.connpass.com/event/397011/",
+    "thumb": "https://media.connpass.com/thumbs/3d/d6/3dd63857a25461f3e3dcc81d76b895a6.png"
+  },
+  {
+    "date": "2026-06-29",
+    "type": "talk",
+    "title": "Claude Code Skills活用を深めるための公開1on1",
+    "venue": "Findy",
+    "url": "https://findy.connpass.com/event/397370/",
+    "thumb": "https://media.connpass.com/thumbs/7b/48/7b480db2fa6bb48159bf225037f119fe.png"
+  },
+  {
+    "date": "2026-04-04",
+    "type": "video",
+    "title": "【キーボード界隈】あなたはまだ\"キーボードの世界\"を知らない。",
+    "venue": "TECH WORLD",
+    "url": "https://youtu.be/KjRYHc27fx0",
+    "thumb": "https://i.ytimg.com/vi/KjRYHc27fx0/hqdefault.jpg"
+  },
+  {
+    "date": "2026-04-02",
+    "type": "talk",
+    "title": "ターミナルに引きこもる極意",
+    "venue": "あなたのdotfilesを教えて！ (Findy)",
+    "url": "https://www.docswell.com/s/mozumasu/ZN71M7-2026-04-02-dotfiles",
+    "event": "https://findy.connpass.com/event/387107/",
+    "thumb": "https://bcdn.docswell.com/page/VENY8DR8J8.jpg?width=480"
+  },
+  {
+    "date": "2026-03-27",
+    "type": "talk",
+    "title": "モテるターミナル WezTermの機能に迫る",
+    "venue": "Terminal Night #2",
+    "url": "https://www.docswell.com/s/mozumasu/5PR9PQ-2026-03-27-190503",
+    "event": "https://kichijojipm.connpass.com/event/382650/",
+    "thumb": "https://bcdn.docswell.com/page/47QYM565EP.jpg?width=480"
+  },
+  {
+    "date": "2026-03-19",
+    "type": "talk",
+    "title": "ターミナルオタクが最初に知りたいCodex情報",
+    "venue": "Codex Meetup Tokyo #1",
+    "url": "https://www.docswell.com/s/mozumasu/ZJWL93-2026-03-19-codex-meetup-tokyo-1",
+    "thumb": "https://bcdn.docswell.com/page/L71YKRZVJG.jpg?width=480"
+  },
+  {
+    "date": "2026-02-25",
+    "type": "talk",
+    "title": "TerraformをClaude Codeで書く技術",
+    "venue": "一歩踏み込む Claude Code 活用LT会 (Findy)",
+    "url": "https://www.docswell.com/s/mozumasu/KEY6MD-2026-02-25-claude-code-terraform",
+    "event": "https://findy.connpass.com/event/383312/",
+    "thumb": "https://bcdn.docswell.com/page/8JDKWG5NEG.jpg?width=480"
+  },
+  {
+    "date": "2026-01-15",
+    "type": "talk",
+    "title": "好きなdotfiles発表ドラゴン",
+    "url": "https://www.docswell.com/s/mozumasu/5DWPG4-dotfiles-dragon",
+    "thumb": "https://bcdn.docswell.com/page/8EDX525KJG.jpg?width=480"
+  },
+  {
+    "date": "2025-12-29",
+    "type": "video",
+    "title": "【WezTerm】モテたい人のためのターミナル設定入門",
+    "venue": "TECH WORLD",
+    "url": "https://youtu.be/zShNd2J5oMI",
+    "thumb": "https://i.ytimg.com/vi/zShNd2J5oMI/hqdefault.jpg"
+  },
+  {
+    "date": "2025-12-09",
+    "type": "talk",
+    "title": "池袋最高！ブクロLT会",
+    "url": "https://sysmac.connpass.com/event/371601/",
+    "thumb": "https://media.connpass.com/thumbs/a2/e2/a2e25bd05558261cad493c8839c84524.png"
+  },
+  {
+    "date": "2025-12-07",
+    "type": "article",
+    "title": "ターミナルでメモ管理 (Neovim, nb, zeno.zsh)",
+    "emoji": "📝",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-cli-info-management",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--SMkCEZS9--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:%25E3%2582%25BF%25E3%2583%25BC%25E3%2583%259F%25E3%2583%258A%25E3%2583%25AB%25E3%2581%25A7%25E3%2583%25A1%25E3%2583%25A2%25E7%25AE%25A1%25E7%2590%2586%2520%2528Neovim%252C%2520nb%252C%2520zeno.zsh%2529%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2025-12-01",
+    "type": "article",
+    "title": "爆速CLI入門 ~最初に知りたかったTips~",
+    "emoji": "🌸",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-cli-beginner",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s---yLuPUm3--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:%25E7%2588%2586%25E9%2580%259FCLI%25E5%2585%25A5%25E9%2596%2580%2520%7E%25E6%259C%2580%25E5%2588%259D%25E3%2581%25AB%25E7%259F%25A5%25E3%2582%258A%25E3%2581%259F%25E3%2581%258B%25E3%2581%25A3%25E3%2581%259FTips%7E%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2025-10-23",
+    "type": "talk",
+    "title": "Engineer Desk Tour",
+    "venue": "Findy",
+    "url": "https://findy.connpass.com/event/371827/",
+    "thumb": "https://media.connpass.com/thumbs/c1/f5/c1f5bdaa2b35f3b810f855f2ce60ee82.png"
+  },
+  {
+    "date": "2025-10-20",
+    "type": "talk",
+    "title": "神楽坂第1ターミナル",
+    "url": "https://kagurazaka-terminal.connpass.com/event/370095/",
+    "thumb": "https://media.connpass.com/thumbs/20/9b/209b9994a70b0dcef44d14fe0519def4.png"
+  },
+  {
+    "date": "2025-08-06",
+    "type": "talk",
+    "title": "自作キーボード沼にハマってみた",
+    "venue": "ぬまろぐ！",
+    "url": "https://numa-log.connpass.com/event/362104/",
+    "thumb": "https://media.connpass.com/thumbs/e1/59/e159b26b076f27c1366f1439dad5ac89.png"
+  },
+  {
+    "date": "2025-02-11",
+    "type": "article",
+    "title": "CLIでもコミットメッセージはAIに書いてもらえる (cz-git,czg)",
+    "emoji": "⚡️",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-cz-git",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--OtB2xizW--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:CLI%25E3%2581%25A7%25E3%2582%2582%25E3%2582%25B3%25E3%2583%259F%25E3%2583%2583%25E3%2583%2588%25E3%2583%25A1%25E3%2583%2583%25E3%2582%25BB%25E3%2583%25BC%25E3%2582%25B8%25E3%2581%25AFAI%25E3%2581%25AB%25E6%259B%25B8%25E3%2581%2584%25E3%2581%25A6%25E3%2582%2582%25E3%2582%2589%25E3%2581%2588%25E3%2582%258B%2520%2528cz-git%252Cczg%2529%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2024-12-19",
+    "type": "article",
+    "title": "CLIでVPN接続する (for Mac)",
+    "emoji": "🛜",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-vpnstatus",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--S3ti9e_G--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:CLI%25E3%2581%25A7VPN%25E6%258E%25A5%25E7%25B6%259A%25E3%2581%2599%25E3%2582%258B%2520%2528for%2520Mac%2529%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2024-12-16",
+    "type": "talk",
+    "title": "めぐろLT #22「LT忘年会2024」",
+    "venue": "めぐろLT",
+    "url": "https://meguro-meetup.connpass.com/event/330013/"
+  },
+  {
+    "date": "2024-12-04",
+    "type": "article",
+    "title": "モテるGit管理 (gh, ghq, git-cz, lazygit)",
+    "emoji": "💪",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-lazy-git",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--2x-xGVnY--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:%25E3%2583%25A2%25E3%2583%2586%25E3%2582%258BGit%25E7%25AE%25A1%25E7%2590%2586%2520%2528gh%252C%2520ghq%252C%2520git-cz%252C%2520lazygit%2529%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2024-11-30",
+    "type": "article",
+    "title": "デスクトップは「清く・正しく・美しく」AeroSpace, JankyBorders, SketchyBar, alt-tab",
+    "emoji": "🎄",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-window-costomization",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--VIGMRXEQ--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:%25E3%2583%2587%25E3%2582%25B9%25E3%2582%25AF%25E3%2583%2588%25E3%2583%2583%25E3%2583%2597%25E3%2581%25AF%25E3%2580%258C%25E6%25B8%2585%25E3%2581%258F%25E3%2583%25BB%25E6%25AD%25A3%25E3%2581%2597%25E3%2581%258F%25E3%2583%25BB%25E7%25BE%258E%25E3%2581%2597%25E3%2581%258F%25E3%2580%258DAeroSpace%252C%2520JankyBorders%252C%2520SketchyBar%252C%2520a...%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2024-11-09",
+    "type": "article",
+    "title": "楽しいインフラエンジニア入門",
+    "emoji": "🍣",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-infra-beginner",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--74epmLlK--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:%25E6%25A5%25BD%25E3%2581%2597%25E3%2581%2584%25E3%2582%25A4%25E3%2583%25B3%25E3%2583%2595%25E3%2583%25A9%25E3%2582%25A8%25E3%2583%25B3%25E3%2582%25B8%25E3%2583%258B%25E3%2582%25A2%25E5%2585%25A5%25E9%2596%2580%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2024-10-30",
+    "type": "article",
+    "title": "Neovimを喋らせたろ",
+    "emoji": "🐈",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-neovim-say",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--29A_wgPW--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:Neovim%25E3%2582%2592%25E5%2596%258B%25E3%2582%2589%25E3%2581%259B%25E3%2581%259F%25E3%2582%258D%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2024-10-06",
+    "type": "article",
+    "title": "NeoVimで翻訳したろ",
+    "emoji": "😊",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-translate-in-vim",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--Jfc_aKJv--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:NeoVim%25E3%2581%25A7%25E7%25BF%25BB%25E8%25A8%25B3%25E3%2581%2597%25E3%2581%259F%25E3%2582%258D%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2024-09-10",
+    "type": "article",
+    "title": "モテるターミナルにカスタマイズしよう（WezTerm）",
+    "emoji": "💘",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-wezterm-customization",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--7sSrxqoq--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:%25E3%2583%25A2%25E3%2583%2586%25E3%2582%258B%25E3%2582%25BF%25E3%2583%25BC%25E3%2583%259F%25E3%2583%258A%25E3%2583%25AB%25E3%2581%25AB%25E3%2582%25AB%25E3%2582%25B9%25E3%2582%25BF%25E3%2583%259E%25E3%2582%25A4%25E3%2582%25BA%25E3%2581%2597%25E3%2582%2588%25E3%2581%2586%25EF%25BC%2588WezTerm%25EF%25BC%2589%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  },
+  {
+    "date": "2024-03-19",
+    "type": "article",
+    "title": "AWS CLIの設定方法とプロファイル切替",
+    "emoji": "🐙",
+    "url": "https://zenn.dev/mozumasu/articles/mozumasu-aws-cli",
+    "thumb": "https://res.cloudinary.com/zenn/image/upload/s--GCsQs_vK--/c_fit%2Cg_north_west%2Cl_text:notosansjp-medium.otf_55:AWS%2520CLI%25E3%2581%25AE%25E8%25A8%25AD%25E5%25AE%259A%25E6%2596%25B9%25E6%25B3%2595%25E3%2581%25A8%25E3%2583%2597%25E3%2583%25AD%25E3%2583%2595%25E3%2582%25A1%25E3%2582%25A4%25E3%2583%25AB%25E5%2588%2587%25E6%259B%25BF%2Cw_1010%2Cx_90%2Cy_100/g_south_west%2Cl_text:notosansjp-medium.otf_37:mozumasu%2Cx_203%2Cy_121/g_south_west%2Ch_90%2Cl_fetch:aHR0cHM6Ly9zdGF0aWMuemVubi5zdHVkaW8vdXNlci11cGxvYWQvYXZhdGFyL2IzZTRhZjAyMDkuanBlZw==%2Cr_max%2Cw_90%2Cx_87%2Cy_95/v1627283836/default/og-base-w1200-v2.png?_a=BACMTiAE"
+  }
+]
