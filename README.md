@@ -4,7 +4,9 @@
 
 ## 構成
 
-- `public/` — 配信するファイルすべて。ビルド工程はなく、`index.html` に CSS / WebGL シェーダー / JS を同梱している
+- `public/` — 配信するファイルすべて。ビルド工程はない
+  - `brand.css` / `water.js` — ヘッダー・ガラス・カードなどの共通スタイルと、水面 + ガラス板を描く WebGL。**talks.mozumasu.com も `https://mozumasu.com/` のこの 2 つを直接読んでいる**ので、クラス名や `#water` の構造を変えるときは talks 側 (`scripts/index-page.mjs`) も合わせる
+  - `index.html` — トップページ。ヒーロー固有のスタイルだけを同梱
   - 背景の水面は WebGL のフラグメントシェーダーで描画。WebGL が使えない環境では CSS グラデーションにフォールバックする
   - `prefers-reduced-motion: reduce` のときは 1 フレームだけ描いて止まる
   - `?t=<秒>` を付けると固定フレームを描画する (OGP 画像やスクリーンショット用)
