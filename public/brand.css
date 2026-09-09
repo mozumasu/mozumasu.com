@@ -1,0 +1,118 @@
+/* mozumasu.com / talks.mozumasu.com 共通のスタイル。talks は https://mozumasu.com/brand.css を直接読む。
+   ページ固有 (トップのヒーローなど) は各ページに置く。 */
+@import url("https://fonts.googleapis.com/css2?family=Anybody:ital,wdth,wght@0,50..150,100..900&family=Martian+Mono:wght@300;400;500&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap");
+
+:root {
+  --ink: #ffffff; --deep: #0b4f5c; --mute: rgba(255,255,255,0.8);
+  --shadow: rgba(4,50,60,0.6);
+  --font-d: "Anybody", "Helvetica Neue", Arial, sans-serif;
+  --font-m: "Martian Mono", ui-monospace, Menlo, monospace;
+  --font-j: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+/* [hidden] loses to any display rule (e.g. .more { display: flex }), so pin it */
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { min-height: 100dvh; overflow-x: hidden; color: var(--ink); font-family: var(--font-m);
+  background: linear-gradient(160deg, #8fd9dc 0%, #3aa8b2 45%, #1f8496 100%); }
+a { color: inherit; text-decoration: none; }
+
+/* ---- fixed backdrop: shader canvas (water.js), vignette, grain ---- */
+.bg { position: fixed; inset: 0; pointer-events: none; }
+canvas#water { width: 100%; height: 100%; display: block; }
+.scrim { background:
+    radial-gradient(60% 55% at 50% 52%, rgba(6,50,60,0.22), rgba(6,50,60,0) 70%),
+    linear-gradient(180deg, rgba(6,50,60,0.34), rgba(6,50,60,0) 18%, rgba(6,50,60,0) 84%, rgba(6,50,60,0.34)); }
+.grain { opacity: 0.08; mix-blend-mode: overlay; }
+.grain svg { width: 100%; height: 100%; }
+
+/* ---- page frame ---- */
+.page { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100dvh; }
+/* header + hero always fill the first screen; sections start below the fold */
+.fold { min-height: 100dvh; display: flex; flex-direction: column; }
+header, footer { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 36px 52px;
+  font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; text-shadow: 0 1px 3px rgba(4,50,60,0.7), 0 2px 16px var(--shadow); }
+footer { padding-top: 24px; margin-top: auto; }
+.brand { display: flex; gap: 10px; align-items: center; font-weight: 500; }
+.brand img { width: 28px; height: 28px; object-fit: contain; }
+nav.top { display: flex; gap: 0.6em; }
+nav.top a:hover, footer a:hover { text-decoration: underline; text-underline-offset: 4px; }
+nav.top a[aria-current="page"] { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255,255,255,0.7); }
+
+/* ---- liquid glass: thick clear slab with a bright rim. With WebGL the slab itself is drawn by water.js,
+   so the element only keeps its text and shadow; without it, this blur-based look stays. ---- */
+.glass { position: relative; isolation: isolate; color: #fff; border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  -webkit-backdrop-filter: blur(6px) saturate(1.35); backdrop-filter: blur(6px) saturate(1.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -1px 0 rgba(255,255,255,0.3),
+    inset 0 0 0 1px rgba(255,255,255,0.42),
+    inset 0 -14px 24px -12px rgba(4,50,60,0.22),
+    inset 0 14px 24px -14px rgba(255,255,255,0.75),
+    0 26px 44px -16px rgba(4,50,60,0.55), 0 2px 6px rgba(4,50,60,0.15);
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+body.glassgl .glass:not(.primary) { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none;
+  text-shadow: 0 1px 2px rgba(4,50,60,0.45), 0 0 14px rgba(4,50,60,0.25);
+  box-shadow: 0 26px 44px -16px rgba(4,50,60,0.55); }
+body.glassgl .glass:not(.primary)::before, body.glassgl .glass:not(.primary)::after { display: none; }
+.glass::before, .glass::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; }
+.glass::before { background: linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.06) 42%, rgba(255,255,255,0) 58%, rgba(255,255,255,0.16)); }
+.glass::after { padding: 1.5px;
+  background: conic-gradient(from 200deg, rgba(255,255,255,0.95), rgba(255,255,255,0.12) 18%, rgba(170,240,255,0.6) 32%, rgba(255,255,255,0.95) 50%, rgba(255,205,240,0.55) 66%, rgba(255,255,255,0.15) 82%, rgba(255,255,255,0.95));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+a.glass:hover, button.glass:hover { transform: translateY(-2px); background: rgba(255,255,255,0.22); }
+body.glassgl a.glass:hover, body.glassgl button.glass:hover { background: rgba(255,255,255,0.14); }
+.glass.primary { background: rgba(255,255,255,0.9); color: var(--deep); }
+a.glass.primary:hover { background: #fff; }
+
+/* ---- card sections (activities on the top page, decks on talks) ---- */
+.section { padding: 24px 52px 96px; }
+.section .head { max-width: 1120px; margin: 0 auto 28px; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.section h1, .section h2 { font-family: var(--font-d); font-variation-settings: "wdth" 130; font-weight: 800; font-size: 30px; letter-spacing: 0.02em; text-transform: uppercase; text-shadow: 0 2px 0 rgba(255,255,255,0.3), 0 12px 30px rgba(4,50,60,0.4); }
+.section .head small { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mute); text-shadow: 0 1px 12px var(--shadow); }
+.section .head small a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.cards { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.card { display: flex; flex-direction: column; border-radius: 20px; overflow: hidden; padding: 6px; }
+.card:hover { transform: translateY(-2px); }
+.card.hidden { display: none; }
+.card h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.thumb { position: relative; display: block; aspect-ratio: 16 / 9; background: rgba(4,50,60,0.25); overflow: hidden; border-radius: 14px; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb .emoji { width: 100%; height: 100%; display: grid; place-items: center; font-size: 56px; background: linear-gradient(160deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08)); }
+.badge { position: absolute; left: 10px; top: 10px; padding: 4px 8px; border-radius: 999px; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500;
+  background: rgba(4,50,60,0.55); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.badge.upcoming, .badge.right { left: auto; right: 10px; }
+.badge.upcoming { background: #fff; color: var(--deep); }
+.card .body { padding: 12px 12px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.card .meta { display: flex; gap: 10px; align-items: baseline; font-size: 10px; letter-spacing: 0.12em; color: rgba(255,255,255,0.85); text-transform: uppercase; }
+.card .meta .venue { text-transform: none; letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card h3 { font-family: var(--font-j); font-size: 15px; font-weight: 500; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .links { margin-top: auto; padding-top: 4px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute); }
+.card .links a:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.more { max-width: 1120px; margin: 28px auto 0; display: flex; justify-content: center; }
+.more button { font: inherit; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer; border: 0; padding: 16px 32px; }
+
+/* decorative depth gauge on wide screens */
+.depth { position: fixed; right: 52px; top: 50%; transform: translateY(-50%); z-index: 1; display: flex; flex-direction: column; gap: 30px; align-items: flex-end;
+  font-size: 10px; letter-spacing: 0.2em; color: var(--mute); text-shadow: 0 1px 10px var(--shadow); pointer-events: none; }
+.depth div { display: flex; align-items: center; gap: 10px; }
+.depth i { width: 14px; height: 1px; background: rgba(255,255,255,0.6); }
+.depth .on { color: #fff; } .depth .on i { width: 28px; background: #fff; }
+
+@media (max-width: 900px) { .depth { display: none; } }
+@media (max-width: 640px) {
+  header, footer { padding: 22px 20px; font-size: 10px; letter-spacing: 0.14em; }
+  header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  footer { flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+  .section { padding: 8px 16px 64px; }
+  .cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { padding: 4px; border-radius: 16px; }
+  .thumb { border-radius: 12px; }
+  .card .body { padding: 8px 8px 10px; }
+  .card h3 { font-size: 13px; }
+  .thumb .emoji { font-size: 40px; }
+}
+@media (prefers-reduced-motion: reduce) { .glass { transition: none; } }
