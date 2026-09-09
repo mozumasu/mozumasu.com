@@ -337,46 +337,50 @@ void main() {
   vec3 col = water(p, uv, t, 1.0);
 
   // nearest glass slab under this pixel
-  float sd = 1e9; vec2 dir = vec2(0.0); float hs = 1.0; float vpos = 0.0;
+  float sd = 1e9; vec2 dir = vec2(0.0); float hs = 1.0; float vpos = 0.0; vec2 qn = vec2(0.0);
   for (int i = 0; i < MAXG; i++) {
     if (i >= u_count) break;
     vec4 r = u_rects[i];
     vec2 q = fc - r.xy;
     float s = sdRoundBox(q, r.zw, u_radii[i]);
     if (s < sd) {
-      sd = s; hs = min(r.z, r.w); vpos = q.y / r.w;
+      sd = s; hs = min(r.z, r.w); vpos = q.y / r.w; qn = q;
       vec2 g = vec2(sdRoundBox(q + vec2(1.0, 0.0), r.zw, u_radii[i]) - s, sdRoundBox(q + vec2(0.0, 1.0), r.zw, u_radii[i]) - s);
       dir = normalize(g + vec2(1e-4, 0.0));
     }
   }
-  if (sd < 1.5) {
+  if (sd < 10.0 * u_dpr) {
     float cover = 1.0 - smoothstep(-1.0, 1.0, sd);
-    float edgeW = min(16.0 * u_dpr, 0.42 * hs);    // width of the refracting rim, px (kept small on small slabs)
+    float edgeW = min(14.0 * u_dpr, 0.4 * hs);     // width of the refracting rim, px (kept small on small slabs)
     float rim = 1.0 - smoothstep(0.0, edgeW, -sd);   // 1 on the edge -> 0 inside
-    float bend = pow(rim, 1.7);
-    // thick glass: the rim bends the water inward, each channel a little differently (dispersion);
-    // the core is frosted (fewer wrinkles) and lifted toward white
-    vec3 gcol;
-    if (bend > 0.01) {
-      float k = min(22.0 * u_dpr, 0.6 * hs) / u_res.y;
-      gcol.r = water(p - dir * bend * k * 0.90, uv, t, 0.4).r;
-      gcol.g = water(p - dir * bend * k * 1.00, uv, t, 0.4).g;
-      gcol.b = water(p - dir * bend * k * 1.10, uv, t, 0.4).b;
-    } else {
-      gcol = water(p, uv, t, 0.4);
-    }
-    gcol = mix(gcol, vec3(1.0), 0.16) * 1.03;
+    float bend = rim * rim * (3.0 - 2.0 * rim);
     vec2 sun = normalize(vec2(-0.6, 0.8));
     float facing = dot(dir, sun);
-    gcol += pow(rim, 3.0) * (0.35 + 0.65 * max(facing, 0.0)) * 0.6;   // bright rim toward the light
-    gcol -= pow(rim, 2.0) * max(-facing, 0.0) * 0.22;                  // shaded rim on the far side
-    float band = smoothstep(edgeW * 0.55, edgeW * 0.7, -sd) * (1.0 - smoothstep(edgeW * 0.85, edgeW, -sd));
-    gcol += band * 0.08;                                               // faint inner line = slab thickness
-    gcol += smoothstep(-0.3, 1.0, vpos) * 0.10;                        // sheen: brighter toward the top
+    // thick clear glass: the core is a slightly magnified, barely frosted view of the water;
+    // the rim bends it inward, each channel a little differently (dispersion)
+    vec2 lens = qn * 0.035 / u_res.y;
+    vec3 gcol;
+    if (bend > 0.01) {
+      float k = min(28.0 * u_dpr, 0.7 * hs) / u_res.y;
+      gcol.r = water(p - lens - dir * bend * k * 0.88, uv, t, 0.75).r;
+      gcol.g = water(p - lens - dir * bend * k * 1.00, uv, t, 0.75).g;
+      gcol.b = water(p - lens - dir * bend * k * 1.12, uv, t, 0.75).b;
+    } else {
+      gcol = water(p - lens, uv, t, 0.75);
+    }
+    gcol = mix(gcol, vec3(1.0), 0.07) * 1.02;
+    gcol += pow(rim, 4.0) * (0.25 + 0.75 * max(facing, 0.0)) * 0.7;            // specular on the rim facing the light
+    gcol += pow(rim, 3.0) * max(-facing, 0.0) * 0.35 * vec3(0.9, 1.0, 1.0);    // light leaking through the far edge
+    gcol -= pow(rim, 1.5) * (1.0 - abs(facing)) * 0.06;                        // sides a touch darker
+    float gloss = smoothstep(0.2, 0.55, vpos) * (1.0 - smoothstep(0.7, 0.95, vpos));
+    gcol += gloss * 0.10;                                                       // soft reflection streak near the top
     col = mix(col, gcol, cover);
     // 1px specular outline on the boundary, drawn here (not in CSS) so it can never drift from the slab
     float line = 1.0 - smoothstep(0.0, 1.2 * u_dpr, abs(sd + 0.6 * u_dpr));
-    col = mix(col, vec3(1.0), line * (0.45 + 0.5 * max(facing, 0.0)));
+    col = mix(col, vec3(1.0), line * (0.35 + 0.55 * max(facing, 0.0)));
+    // light focused through the slab lands just outside its far edge
+    float halo = (1.0 - smoothstep(0.0, 10.0 * u_dpr, sd)) * step(0.0, sd) * max(-facing, 0.0);
+    col += halo * 0.16 * vec3(0.95, 1.0, 1.0);
   }
   gl_FragColor = vec4(pow(col, vec3(0.96)), 1.0);
 }
