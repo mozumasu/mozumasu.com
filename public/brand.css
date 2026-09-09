@@ -53,10 +53,14 @@ nav.top a[aria-current="page"] { text-decoration: underline; text-underline-offs
     0 26px 44px -16px rgba(4,50,60,0.55), 0 2px 6px rgba(4,50,60,0.15);
   transition: transform 0.25s ease, background 0.25s ease;
 }
-body.glassgl .glass:not(.primary) { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none;
+/* with the shader: a light CSS frost + rim stays on the element (it scrolls with it, so nothing can lag),
+   the shader adds refraction and light underneath once the page is still */
+body.glassgl .glass:not(.primary) { background: rgba(255,255,255,0.10);
+  -webkit-backdrop-filter: blur(3px) saturate(1.25); backdrop-filter: blur(3px) saturate(1.25);
   text-shadow: 0 1px 2px rgba(4,50,60,0.45), 0 0 14px rgba(4,50,60,0.25);
-  box-shadow: 0 26px 44px -16px rgba(4,50,60,0.55); }
-body.glassgl .glass:not(.primary)::before, body.glassgl .glass:not(.primary)::after { display: none; }
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), inset 0 0 0 1px rgba(255,255,255,0.35), 0 26px 44px -16px rgba(4,50,60,0.55); }
+body.glassgl .glass:not(.primary)::before { opacity: 0.5; }
+body.glassgl .glass:not(.primary)::after { opacity: 0.7; }
 .glass::before, .glass::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; }
 .glass::before { background: linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.06) 42%, rgba(255,255,255,0) 58%, rgba(255,255,255,0.16)); }
 .glass::after { padding: 1.5px;
@@ -64,7 +68,8 @@ body.glassgl .glass:not(.primary)::before, body.glassgl .glass:not(.primary)::af
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
 a.glass:hover, button.glass:hover { transform: translateY(-2px); background: rgba(255,255,255,0.22); }
-body.glassgl a.glass:hover, body.glassgl button.glass:hover { background: rgba(255,255,255,0.14); }
+/* no lift with the shader: the slab is drawn where the element was measured, so the element must not move */
+body.glassgl a.glass:hover, body.glassgl button.glass:hover, body.glassgl .card:hover { transform: none; background: rgba(255,255,255,0.2); }
 .glass.primary { background: rgba(255,255,255,0.9); color: var(--deep); }
 a.glass.primary:hover { background: #fff; }
 
@@ -114,5 +119,7 @@ a.glass.primary:hover { background: #fff; }
   .card .body { padding: 8px 8px 10px; }
   .card h3 { font-size: 13px; }
   .thumb .emoji { font-size: 40px; }
+  /* backdrop blur on every card is too much for phones; the shader's frost is enough */
+  body.glassgl .glass:not(.primary) { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,0.13); }
 }
 @media (prefers-reduced-motion: reduce) { .glass { transition: none; } }
