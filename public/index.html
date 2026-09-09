@@ -89,9 +89,10 @@
     transition: transform 0.25s ease, background 0.25s ease;
   }
   /* with WebGL the shader draws the slab (refraction, frost, dispersion) behind the element */
-  body.glassgl .glass { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
-  body.glassgl .glass:not(.primary) { text-shadow: 0 1px 2px rgba(4,50,60,0.45), 0 0 14px rgba(4,50,60,0.25); }
-  body.glassgl .glass::before { opacity: 0.55; }
+  body.glassgl .glass:not(.primary) { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none;
+    text-shadow: 0 1px 2px rgba(4,50,60,0.45), 0 0 14px rgba(4,50,60,0.25);
+    box-shadow: 0 26px 44px -16px rgba(4,50,60,0.55); }
+  body.glassgl .glass:not(.primary)::before, body.glassgl .glass:not(.primary)::after { display: none; }
   .glass::before, .glass::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; }
   .glass::before { background: linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.06) 42%, rgba(255,255,255,0) 58%, rgba(255,255,255,0.16)); }
   .glass::after { padding: 1.5px;
@@ -336,19 +337,19 @@ void main() {
   vec3 col = water(p, uv, t, 1.0);
 
   // nearest glass slab under this pixel
-  float sd = 1e9; vec2 dir = vec2(0.0); float hs = 1.0;
+  float sd = 1e9; vec2 dir = vec2(0.0); float hs = 1.0; float vpos = 0.0;
   for (int i = 0; i < MAXG; i++) {
     if (i >= u_count) break;
     vec4 r = u_rects[i];
     vec2 q = fc - r.xy;
     float s = sdRoundBox(q, r.zw, u_radii[i]);
     if (s < sd) {
-      sd = s; hs = min(r.z, r.w);
+      sd = s; hs = min(r.z, r.w); vpos = q.y / r.w;
       vec2 g = vec2(sdRoundBox(q + vec2(1.0, 0.0), r.zw, u_radii[i]) - s, sdRoundBox(q + vec2(0.0, 1.0), r.zw, u_radii[i]) - s);
       dir = normalize(g + vec2(1e-4, 0.0));
     }
   }
-  if (sd < 1.0) {
+  if (sd < 1.5) {
     float cover = 1.0 - smoothstep(-1.0, 1.0, sd);
     float edgeW = min(16.0 * u_dpr, 0.42 * hs);    // width of the refracting rim, px (kept small on small slabs)
     float rim = 1.0 - smoothstep(0.0, edgeW, -sd);   // 1 on the edge -> 0 inside
@@ -371,7 +372,11 @@ void main() {
     gcol -= pow(rim, 2.0) * max(-facing, 0.0) * 0.22;                  // shaded rim on the far side
     float band = smoothstep(edgeW * 0.55, edgeW * 0.7, -sd) * (1.0 - smoothstep(edgeW * 0.85, edgeW, -sd));
     gcol += band * 0.08;                                               // faint inner line = slab thickness
+    gcol += smoothstep(-0.3, 1.0, vpos) * 0.10;                        // sheen: brighter toward the top
     col = mix(col, gcol, cover);
+    // 1px specular outline on the boundary, drawn here (not in CSS) so it can never drift from the slab
+    float line = 1.0 - smoothstep(0.0, 1.2 * u_dpr, abs(sd + 0.6 * u_dpr));
+    col = mix(col, vec3(1.0), line * (0.45 + 0.5 * max(facing, 0.0)));
   }
   gl_FragColor = vec4(pow(col, vec3(0.96)), 1.0);
 }
@@ -404,17 +409,20 @@ void main() {
     };
     refreshGlass();
     document.addEventListener('glasschange', () => { refreshGlass(); if (fixed !== null || reduced) draw(fixed !== null ? +fixed : 2.5); });
-    const updateRects = (dpr) => {
+    const updateRects = () => {
+      // map CSS px to canvas px through the canvas' own box (a classic scrollbar makes it narrower than innerWidth)
+      const c = canvas.getBoundingClientRect();
+      const sx = canvas.width / c.width, sy = canvas.height / c.height;
       let n = 0;
       for (const el of glassEls) {
         if (n >= MAXG) break;
         const b = el.getBoundingClientRect();
-        if (b.width === 0 || b.bottom < 0 || b.top > innerHeight) continue;
-        rects[n * 4] = (b.left + b.width / 2) * dpr;
-        rects[n * 4 + 1] = canvas.height - (b.top + b.height / 2) * dpr;
-        rects[n * 4 + 2] = b.width / 2 * dpr;
-        rects[n * 4 + 3] = b.height / 2 * dpr;
-        radii[n] = Math.min(el._r, b.width / 2, b.height / 2) * dpr;
+        if (b.width === 0 || b.bottom < c.top || b.top > c.bottom) continue;
+        rects[n * 4] = (b.left - c.left + b.width / 2) * sx;
+        rects[n * 4 + 1] = canvas.height - (b.top - c.top + b.height / 2) * sy;
+        rects[n * 4 + 2] = b.width / 2 * sx;
+        rects[n * 4 + 3] = b.height / 2 * sy;
+        radii[n] = Math.min(el._r, b.width / 2, b.height / 2) * sx;
         n++;
       }
       gl.uniform4fv(uRects, rects); gl.uniform1fv(uRadii, radii); gl.uniform1i(uCount, n);
@@ -426,9 +434,9 @@ void main() {
     if (params.get('og')) document.body.classList.add('og');
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const dpr = fixed !== null ? window.devicePixelRatio : Math.min(window.devicePixelRatio || 1, innerWidth < 720 ? 1 : 1.5);
-    const resize = () => { canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr); gl.viewport(0, 0, canvas.width, canvas.height); };
+    const resize = () => { canvas.width = Math.floor(canvas.clientWidth * dpr); canvas.height = Math.floor(canvas.clientHeight * dpr); gl.viewport(0, 0, canvas.width, canvas.height); };
     resize(); addEventListener('resize', () => { resize(); if (fixed !== null || reduced) draw(fixed !== null ? +fixed : 2.5); });
-    const draw = (t) => { gl.uniform2f(uRes, canvas.width, canvas.height); gl.uniform1f(uTime, t); gl.uniform1f(uDpr, dpr); updateRects(dpr); gl.drawArrays(gl.TRIANGLES, 0, 3); };
+    const draw = (t) => { gl.uniform2f(uRes, canvas.width, canvas.height); gl.uniform1f(uTime, t); gl.uniform1f(uDpr, dpr); updateRects(); gl.drawArrays(gl.TRIANGLES, 0, 3); };
     // the WebGL buffer is only presented from a frame callback, so even a single frame goes through rAF
     if (fixed !== null || reduced) { requestAnimationFrame(() => draw(fixed !== null ? +fixed : 2.5)); return; }
     const t0 = performance.now();
