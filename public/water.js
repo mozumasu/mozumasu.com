@@ -220,7 +220,8 @@ void main() {
     sy = 1,
     docH = 1,
     fullFrame = true;
-  const docHeight = () => Math.max(document.documentElement.scrollHeight, innerHeight);
+  const docHeight = () =>
+    Math.max(document.documentElement.scrollHeight, innerHeight);
   // element boxes in document space, read only when the layout may have changed
   const refreshGlass = () => {
     glassEls = [...document.querySelectorAll(".glass:not(.primary)")]
@@ -250,37 +251,62 @@ void main() {
     gl.uniform1i(uCount, n);
   };
   const MAX_DIM = 8192; // stay well inside canvas size limits on long pages
+  let allocW = 0,
+    allocH = 0;
   const resize = () => {
     docH = docHeight();
     const w = document.documentElement.clientWidth;
     canvas.style.height = docH + "px";
-    const s = Math.min(scale, MAX_DIM / docH);
-    canvas.width = Math.round(w * s);
-    canvas.height = Math.round(docH * s);
+    // Reallocating the bitmap blanks it and forces a repaint of the whole document. On phones the address bar
+    // showing and hiding fires resize on every scroll, so small height changes only re-stretch the existing
+    // bitmap (a few percent, invisible) and repaint the visible band.
+    const small = w === allocW && docH <= allocH && docH > allocH * 0.85;
+    if (!small) {
+      allocW = w;
+      allocH = docH;
+      const s = Math.min(scale, MAX_DIM / docH);
+      canvas.width = Math.round(w * s);
+      canvas.height = Math.round(docH * s);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+      fullFrame = true; // a resized canvas is blank, so paint all of it once
+    }
     sx = canvas.width / w;
     sy = canvas.height / docH;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniform2f(uRes, canvas.width, canvas.height);
     gl.uniform1f(uDpr, sx);
     refreshGlass();
-    fullFrame = true; // a resized canvas is blank, so paint all of it once
   };
 
   const draw = (t) => {
     const vh = innerHeight,
       vy = scrollY;
-    const margin = fullFrame ? docH : vh * 0.3; // pre-shade a band around the viewport so fast scrolls never expose a stale row
+    const margin = fullFrame ? docH : vh * 0.6; // pre-shade a band around the viewport so fast scrolls never expose a stale row
     const y0 = Math.max(0, vy - margin),
       y1 = Math.min(docH, vy + vh + margin);
     gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(0, Math.floor(canvas.height - y1 * sy), canvas.width, Math.ceil((y1 - y0) * sy) + 1);
-    gl.uniform4f(uView, 0, canvas.height - (vy + vh) * sy, canvas.width, vh * sy);
+    gl.scissor(
+      0,
+      Math.floor(canvas.height - y1 * sy),
+      canvas.width,
+      Math.ceil((y1 - y0) * sy) + 1,
+    );
+    gl.uniform4f(
+      uView,
+      0,
+      canvas.height - (vy + vh) * sy,
+      canvas.width,
+      vh * sy,
+    );
     gl.uniform1f(uTime, t);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     fullFrame = false;
   };
   // the WebGL buffer is only presented from a frame callback, so even a single frame goes through rAF
-  const drawStill = () => requestAnimationFrame(() => { fullFrame = true; draw(stillTime); });
+  const drawStill = () =>
+    requestAnimationFrame(() => {
+      fullFrame = true;
+      draw(stillTime);
+    });
 
   resize();
   const relayout = () => {
@@ -288,26 +314,43 @@ void main() {
     else refreshGlass();
     if (still) drawStill();
   };
-  addEventListener("resize", () => { resize(); if (still) drawStill(); });
+  addEventListener("resize", () => {
+    resize();
+    if (still) drawStill();
+  });
   document.addEventListener("glasschange", relayout);
   addEventListener("load", relayout);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
-  if (window.ResizeObserver) new ResizeObserver(relayout).observe(document.body);
+  if (document.fonts && document.fonts.ready)
+    document.fonts.ready.then(relayout);
+  if (window.ResizeObserver)
+    new ResizeObserver(relayout).observe(document.body);
   setInterval(relayout, 1500); // cheap safety net for layout shifts nothing above catches
   if (still) {
     drawStill();
     return;
   }
 
-  const t0 = performance.now();
-  let raf = 0,
-    lastFrame = 0;
-  const loop = (now) => {
-    raf = requestAnimationFrame(loop);
-    if (now - lastFrame < frameMs) return;
-    lastFrame = now;
-    draw((now - t0) / 1000);
-  };
+// The water keeps moving while the page scrolls: the canvas travels with the content, so nothing can drift.
+// Phones drop to 15 fps during a scroll to leave more of the GPU to the compositor.
+let lastScroll = -1e9;
+addEventListener(
+  "scroll",
+  () => {
+    lastScroll = performance.now();
+  },
+  { passive: true },
+);
+let raf = 0,
+  lastFrame = 0;
+const t0 = performance.now();
+const loop = (now) => {
+  raf = requestAnimationFrame(loop);
+  const scrolling = now - lastScroll < 150;
+  const interval = scrolling && mobile ? 66 : frameMs;
+  if (now - lastFrame < interval) return;
+  lastFrame = now;
+  draw((now - t0) / 1000);
+};
   const start = () => {
     if (!raf) raf = requestAnimationFrame(loop);
   };
