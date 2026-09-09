@@ -55,10 +55,9 @@ nav.top a[aria-current="page"] { text-decoration: underline; text-underline-offs
     0 26px 44px -16px rgba(4,50,60,0.55), 0 2px 6px rgba(4,50,60,0.15);
   transition: transform 0.25s ease, background 0.25s ease;
 }
-/* with the shader: a light CSS frost + rim stays on the element (it scrolls with it, so nothing can lag),
-   the shader adds refraction and light underneath once the page is still */
-body.glassgl .glass:not(.primary) { background: rgba(255,255,255,0.10);
-  -webkit-backdrop-filter: blur(3px) saturate(1.25); backdrop-filter: blur(3px) saturate(1.25);
+/* with the shader: the element keeps only text, a thin rim and a faint tint; refraction and light come from the slab underneath */
+body.glassgl .glass:not(.primary) { background: rgba(255,255,255,0.06);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
   text-shadow: 0 1px 2px rgba(4,50,60,0.45), 0 0 14px rgba(4,50,60,0.25);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), inset 0 0 0 1px rgba(255,255,255,0.35), 0 26px 44px -16px rgba(4,50,60,0.55); }
 body.glassgl .glass:not(.primary)::before { opacity: 0.5; }
@@ -121,8 +120,6 @@ a.glass.primary:hover { background: #fff; }
   .card .body { padding: 8px 8px 10px; }
   .card h3 { font-size: 13px; }
   .thumb .emoji { font-size: 40px; }
-  /* backdrop blur on every card is too much for phones; the shader's frost is enough */
-  body.glassgl .glass:not(.primary) { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,0.06); }
   /* backdrop blur on badges and the blend-mode grain make the compositor redraw every scroll frame on iOS */
   .badge { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(4,50,60,0.7); }
   .grain { display: none; }
