@@ -8,6 +8,6 @@
     "thumbs": "node scripts/resolve-thumbs.mjs"
   },
   "devDependencies": {
-    "wrangler": "4.113.0"
+    "wrangler": "4.129.0"
   }
 }
