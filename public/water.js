@@ -220,7 +220,8 @@ void main() {
     sy = 1,
     docH = 1,
     fullFrame = true;
-  const docHeight = () => Math.max(document.documentElement.scrollHeight, innerHeight);
+  const docHeight = () =>
+    Math.max(document.documentElement.scrollHeight, innerHeight);
   // element boxes in document space, read only when the layout may have changed
   const refreshGlass = () => {
     glassEls = [...document.querySelectorAll(".glass:not(.primary)")]
@@ -269,18 +270,33 @@ void main() {
   const draw = (t) => {
     const vh = innerHeight,
       vy = scrollY;
-    const margin = fullFrame ? docH : vh * 0.3; // pre-shade a band around the viewport so fast scrolls never expose a stale row
+    const margin = fullFrame ? docH : vh * 0.6; // pre-shade a band around the viewport so fast scrolls never expose a stale row
     const y0 = Math.max(0, vy - margin),
       y1 = Math.min(docH, vy + vh + margin);
     gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(0, Math.floor(canvas.height - y1 * sy), canvas.width, Math.ceil((y1 - y0) * sy) + 1);
-    gl.uniform4f(uView, 0, canvas.height - (vy + vh) * sy, canvas.width, vh * sy);
+    gl.scissor(
+      0,
+      Math.floor(canvas.height - y1 * sy),
+      canvas.width,
+      Math.ceil((y1 - y0) * sy) + 1,
+    );
+    gl.uniform4f(
+      uView,
+      0,
+      canvas.height - (vy + vh) * sy,
+      canvas.width,
+      vh * sy,
+    );
     gl.uniform1f(uTime, t);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     fullFrame = false;
   };
   // the WebGL buffer is only presented from a frame callback, so even a single frame goes through rAF
-  const drawStill = () => requestAnimationFrame(() => { fullFrame = true; draw(stillTime); });
+  const drawStill = () =>
+    requestAnimationFrame(() => {
+      fullFrame = true;
+      draw(stillTime);
+    });
 
   resize();
   const relayout = () => {
@@ -288,25 +304,45 @@ void main() {
     else refreshGlass();
     if (still) drawStill();
   };
-  addEventListener("resize", () => { resize(); if (still) drawStill(); });
+  addEventListener("resize", () => {
+    resize();
+    if (still) drawStill();
+  });
   document.addEventListener("glasschange", relayout);
   addEventListener("load", relayout);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
-  if (window.ResizeObserver) new ResizeObserver(relayout).observe(document.body);
+  if (document.fonts && document.fonts.ready)
+    document.fonts.ready.then(relayout);
+  if (window.ResizeObserver)
+    new ResizeObserver(relayout).observe(document.body);
   setInterval(relayout, 1500); // cheap safety net for layout shifts nothing above catches
   if (still) {
     drawStill();
     return;
   }
 
-  const t0 = performance.now();
+  // Nothing is drawn while the page scrolls: the canvas travels with the content, so the frozen water still
+  // scrolls smoothly, and the GPU is left to the compositor. The animation clock stops too, so the first frame
+  // after a scroll repaints exactly what was on screen and the water resumes without a jump.
+  let lastScroll = -1e9;
+  addEventListener(
+    "scroll",
+    () => {
+      lastScroll = performance.now();
+    },
+    { passive: true },
+  );
   let raf = 0,
-    lastFrame = 0;
+    lastFrame = 0,
+    lastNow = performance.now(),
+    clock = 0;
   const loop = (now) => {
     raf = requestAnimationFrame(loop);
-    if (now - lastFrame < frameMs) return;
+    const scrolling = now - lastScroll < 150;
+    if (!scrolling) clock += now - lastNow;
+    lastNow = now;
+    if (scrolling || now - lastFrame < frameMs) return;
     lastFrame = now;
-    draw((now - t0) / 1000);
+    draw(clock / 1000);
   };
   const start = () => {
     if (!raf) raf = requestAnimationFrame(loop);
