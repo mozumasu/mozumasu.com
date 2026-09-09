@@ -19,7 +19,9 @@ a { color: inherit; text-decoration: none; }
 
 /* ---- fixed backdrop: shader canvas (water.js), vignette, grain ---- */
 .bg { position: fixed; inset: 0; pointer-events: none; }
-canvas#water { width: 100%; height: 100%; display: block; }
+/* the water canvas is laid over the whole document (water.js sets its height) so it scrolls with the content */
+body { position: relative; }
+canvas#water { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .scrim { background:
     radial-gradient(60% 55% at 50% 52%, rgba(6,50,60,0.22), rgba(6,50,60,0) 70%),
     linear-gradient(180deg, rgba(6,50,60,0.34), rgba(6,50,60,0) 18%, rgba(6,50,60,0) 84%, rgba(6,50,60,0.34)); }

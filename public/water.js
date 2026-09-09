@@ -8,7 +8,8 @@ precision highp float;
 uniform vec2 u_res;
 uniform float u_time;
 uniform float u_dpr;
-uniform float u_glass;   // 0..1: slabs fade out while the page scrolls (the canvas trails the DOM by a frame)
+uniform float u_glass;   // 0..1: strength of the slabs (1 unless a page wants them off)
+uniform vec4 u_view;     // visible viewport in canvas px: x, y (bottom-up), w, h. The canvas covers the whole document
 uniform float u_disp;    // 1: per-channel refraction (dispersion), 0: single sample (mobile)
 uniform int u_oct;       // fbm octaves (5 desktop, 4 mobile)
 // glass slabs, taken from the DOM every frame: center.xy + half-size.xy in canvas px (y up), corner radius
@@ -88,8 +89,9 @@ float sdRoundBox(vec2 q, vec2 b, float r) {
 }
 void main() {
   vec2 fc = gl_FragCoord.xy;
-  vec2 uv = fc / u_res;
-  vec2 p = (fc - 0.5 * u_res) / u_res.y;
+  // the water is painted on the page (it scrolls with the content); only the tint gradient follows the viewport
+  vec2 uv = (fc - u_view.xy) / u_view.zw;
+  vec2 p = (fc - 0.5 * u_res) / u_view.w;
   float t = u_time;
   vec3 col = water(p, uv, t, 1.0);
 
@@ -115,9 +117,9 @@ void main() {
     float facing = dot(dir, sun);
     // thick clear glass: the core is a slightly magnified, barely frosted view of the water;
     // the rim bends it inward, each channel a little differently (dispersion)
-    vec2 lens = qn * 0.035 / u_res.y;
+    vec2 lens = qn * 0.035 / u_view.w;
     vec3 gcol;
-    float k = min(28.0 * u_dpr, 0.7 * hs) / u_res.y;
+    float k = min(28.0 * u_dpr, 0.7 * hs) / u_view.w;
     if (bend > 0.01 && u_disp > 0.5) {
       gcol.r = water(p - lens - dir * bend * k * 0.88, uv, t, 0.75).r;
       gcol.g = water(p - lens - dir * bend * k * 1.00, uv, t, 0.75).g;
@@ -186,7 +188,8 @@ void main() {
     uCount = gl.getUniformLocation(prog, "u_count");
   const uGlass = gl.getUniformLocation(prog, "u_glass"),
     uDisp = gl.getUniformLocation(prog, "u_disp"),
-    uOct = gl.getUniformLocation(prog, "u_oct");
+    uOct = gl.getUniformLocation(prog, "u_oct"),
+    uView = gl.getUniformLocation(prog, "u_view");
 
   const params = new URLSearchParams(location.search);
   const fixed = params.get("t");
@@ -195,7 +198,7 @@ void main() {
   const stillTime = fixed !== null ? +fixed : 2.5;
   // phones get a cheaper shader: lower resolution, 4 octaves, no dispersion, 30 fps
   const mobile = innerWidth < 720 || matchMedia("(pointer: coarse)").matches;
-  const dpr =
+  const scale =
     fixed !== null
       ? window.devicePixelRatio
       : mobile
@@ -204,14 +207,21 @@ void main() {
   const frameMs = mobile ? 30 : 0;
   gl.uniform1f(uDisp, mobile ? 0 : 1);
   gl.uniform1i(uOct, mobile ? 4 : 5);
+  gl.uniform1f(uGlass, 1);
 
-  // glass slabs are rendered by the shader on top of the CSS frost (see brand.css)
+  // The canvas is laid over the whole document and scrolls with it, so the slabs can never trail the
+  // elements. Each frame only the visible part (plus a margin) is shaded via the scissor rect.
   document.body.classList.add("glassgl");
   const MAXG = 16,
     rects = new Float32Array(MAXG * 4),
     radii = new Float32Array(MAXG);
   let glassEls = [];
-  // element boxes are cached in document space so a frame never reads layout; only the scroll offset is applied per frame
+  let sx = 1,
+    sy = 1,
+    docH = 1,
+    fullFrame = true;
+  const docHeight = () => Math.max(document.documentElement.scrollHeight, innerHeight);
+  // element boxes in document space, read only when the layout may have changed
   const refreshGlass = () => {
     glassEls = [...document.querySelectorAll(".glass:not(.primary)")]
       .map((el) => {
@@ -225,20 +235,11 @@ void main() {
         };
       })
       .filter((g) => g.w > 0);
-  };
-  let sx = 1,
-    sy = 1;
-  const updateRects = () => {
-    const vx = scrollX,
-      vy = scrollY,
-      vh = canvas.clientHeight;
     let n = 0;
     for (const g of glassEls) {
       if (n >= MAXG) break;
-      const top = g.y - vy;
-      if (top + g.h < 0 || top > vh) continue;
-      rects[n * 4] = (g.x - vx + g.w / 2) * sx;
-      rects[n * 4 + 1] = canvas.height - (top + g.h / 2) * sy;
+      rects[n * 4] = (g.x + g.w / 2) * sx;
+      rects[n * 4 + 1] = canvas.height - (g.y + g.h / 2) * sy;
       rects[n * 4 + 2] = (g.w / 2) * sx;
       rects[n * 4 + 3] = (g.h / 2) * sy;
       radii[n] = Math.min(g.r, g.w / 2, g.h / 2) * sx;
@@ -248,46 +249,51 @@ void main() {
     gl.uniform1fv(uRadii, radii);
     gl.uniform1i(uCount, n);
   };
-
+  const MAX_DIM = 8192; // stay well inside canvas size limits on long pages
   const resize = () => {
-    canvas.width = Math.floor(canvas.clientWidth * dpr);
-    canvas.height = Math.floor(canvas.clientHeight * dpr);
-    // map CSS px to canvas px through the canvas' own box (a classic scrollbar makes it narrower than innerWidth)
-    sx = canvas.width / canvas.clientWidth;
-    sy = canvas.height / canvas.clientHeight;
+    docH = docHeight();
+    const w = document.documentElement.clientWidth;
+    canvas.style.height = docH + "px";
+    const s = Math.min(scale, MAX_DIM / docH);
+    canvas.width = Math.round(w * s);
+    canvas.height = Math.round(docH * s);
+    sx = canvas.width / w;
+    sy = canvas.height / docH;
     gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.uniform1f(uDpr, sx);
     refreshGlass();
+    fullFrame = true; // a resized canvas is blank, so paint all of it once
   };
-  // while the page scrolls the canvas trails the DOM by a frame, so the slabs fade out and return once it settles
-  let lastScroll = -1e9;
-  addEventListener("scroll", () => { lastScroll = performance.now(); }, { passive: true });
-  const glassAmount = (now) =>
-    still ? 1 : Math.min(1, Math.max(0, (now - lastScroll - 120) / 220));
 
   const draw = (t) => {
-    gl.uniform2f(uRes, canvas.width, canvas.height);
+    const vh = innerHeight,
+      vy = scrollY;
+    const margin = fullFrame ? docH : vh * 0.3; // pre-shade a band around the viewport so fast scrolls never expose a stale row
+    const y0 = Math.max(0, vy - margin),
+      y1 = Math.min(docH, vy + vh + margin);
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(0, Math.floor(canvas.height - y1 * sy), canvas.width, Math.ceil((y1 - y0) * sy) + 1);
+    gl.uniform4f(uView, 0, canvas.height - (vy + vh) * sy, canvas.width, vh * sy);
     gl.uniform1f(uTime, t);
-    gl.uniform1f(uDpr, dpr);
-    gl.uniform1f(uGlass, glassAmount(performance.now()));
-    updateRects();
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    fullFrame = false;
   };
   // the WebGL buffer is only presented from a frame callback, so even a single frame goes through rAF
-  const drawStill = () => requestAnimationFrame(() => draw(stillTime));
+  const drawStill = () => requestAnimationFrame(() => { fullFrame = true; draw(stillTime); });
 
   resize();
-  addEventListener("resize", () => {
-    resize();
-    if (still) drawStill();
-  });
   const relayout = () => {
-    refreshGlass();
+    if (docHeight() !== docH || canvas.style.height === "") resize();
+    else refreshGlass();
     if (still) drawStill();
   };
+  addEventListener("resize", () => { resize(); if (still) drawStill(); });
   document.addEventListener("glasschange", relayout);
   addEventListener("load", relayout);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
-  setInterval(refreshGlass, 1000); // cheap safety net for layout shifts nothing above catches
+  if (window.ResizeObserver) new ResizeObserver(relayout).observe(document.body);
+  setInterval(relayout, 1500); // cheap safety net for layout shifts nothing above catches
   if (still) {
     drawStill();
     return;
