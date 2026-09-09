@@ -251,20 +251,30 @@ void main() {
     gl.uniform1i(uCount, n);
   };
   const MAX_DIM = 8192; // stay well inside canvas size limits on long pages
+  let allocW = 0,
+    allocH = 0;
   const resize = () => {
     docH = docHeight();
     const w = document.documentElement.clientWidth;
     canvas.style.height = docH + "px";
-    const s = Math.min(scale, MAX_DIM / docH);
-    canvas.width = Math.round(w * s);
-    canvas.height = Math.round(docH * s);
+    // Reallocating the bitmap blanks it and forces a repaint of the whole document. On phones the address bar
+    // showing and hiding fires resize on every scroll, so small height changes only re-stretch the existing
+    // bitmap (a few percent, invisible) and repaint the visible band.
+    const small = w === allocW && docH <= allocH && docH > allocH * 0.85;
+    if (!small) {
+      allocW = w;
+      allocH = docH;
+      const s = Math.min(scale, MAX_DIM / docH);
+      canvas.width = Math.round(w * s);
+      canvas.height = Math.round(docH * s);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+      fullFrame = true; // a resized canvas is blank, so paint all of it once
+    }
     sx = canvas.width / w;
     sy = canvas.height / docH;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniform2f(uRes, canvas.width, canvas.height);
     gl.uniform1f(uDpr, sx);
     refreshGlass();
-    fullFrame = true; // a resized canvas is blank, so paint all of it once
   };
 
   const draw = (t) => {
