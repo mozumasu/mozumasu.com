@@ -75,18 +75,37 @@
   .lede b { color: #fff; font-weight: 500; }
   .lede a:hover { text-decoration: underline; text-underline-offset: 4px; }
 
-  .tiles { margin-top: 40px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
-  .tile {
-    min-width: 168px; padding: 16px 20px 14px; border-radius: 10px; color: #fff; text-align: left;
-    background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.55);
-    backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 14px 34px rgba(4,50,60,0.3);
-    display: flex; flex-direction: column; gap: 10px; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 500;
+  /* ---- liquid glass: thick clear slab with a bright rim, frosted core, refracted edge ---- */
+  .glass { position: relative; isolation: isolate; color: #fff; border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    -webkit-backdrop-filter: blur(6px) saturate(1.35); backdrop-filter: blur(6px) saturate(1.35);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.95),
+      inset 0 -1px 0 rgba(255,255,255,0.3),
+      inset 0 0 0 1px rgba(255,255,255,0.42),
+      inset 0 -14px 24px -12px rgba(4,50,60,0.22),
+      inset 0 14px 24px -14px rgba(255,255,255,0.75),
+      0 26px 44px -16px rgba(4,50,60,0.55), 0 2px 6px rgba(4,50,60,0.15);
     transition: transform 0.25s ease, background 0.25s ease;
   }
-  a.tile:hover { transform: translateY(-2px); background: rgba(255,255,255,0.26); }
-  .tile small { font-size: 10px; letter-spacing: 0.06em; text-transform: none; color: rgba(255,255,255,0.82); font-weight: 300; }
-  .tile.primary { background: rgba(255,255,255,0.92); color: var(--deep); }
+  /* with WebGL the shader draws the slab (refraction, frost, dispersion) behind the element */
+  body.glassgl .glass { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  body.glassgl .glass:not(.primary) { text-shadow: 0 1px 2px rgba(4,50,60,0.45), 0 0 14px rgba(4,50,60,0.25); }
+  body.glassgl .glass::before { opacity: 0.55; }
+  .glass::before, .glass::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; }
+  .glass::before { background: linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.06) 42%, rgba(255,255,255,0) 58%, rgba(255,255,255,0.16)); }
+  .glass::after { padding: 1.5px;
+    background: conic-gradient(from 200deg, rgba(255,255,255,0.95), rgba(255,255,255,0.12) 18%, rgba(170,240,255,0.6) 32%, rgba(255,255,255,0.95) 50%, rgba(255,205,240,0.55) 66%, rgba(255,255,255,0.15) 82%, rgba(255,255,255,0.95));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+  a.glass:hover, button.glass:hover { transform: translateY(-2px); background: rgba(255,255,255,0.22); }
+  body.glassgl a.glass:hover, body.glassgl button.glass:hover { background: rgba(255,255,255,0.14); }
+
+  .tiles { margin-top: 40px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .tile { min-width: 176px; padding: 16px 26px 14px; text-align: left;
+    display: flex; flex-direction: column; gap: 8px; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 500; }
+  .tile small { font-size: 10px; letter-spacing: 0.06em; text-transform: none; color: rgba(255,255,255,0.85); font-weight: 300; }
+  .tile.primary, body.glassgl .tile.primary { background: rgba(255,255,255,0.9); color: var(--deep); }
   a.tile.primary:hover { background: #fff; }
   .tile.primary small { color: #2a8f98; }
   .tile.soon { opacity: 0.75; cursor: default; }
@@ -103,35 +122,29 @@
   .recent h2 { font-family: var(--font-d); font-variation-settings: "wdth" 130; font-weight: 800; font-size: 30px; letter-spacing: 0.02em; text-transform: uppercase; text-shadow: 0 2px 0 rgba(255,255,255,0.3), 0 12px 30px rgba(4,50,60,0.4); }
   .recent .head small { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mute); text-shadow: 0 1px 12px var(--shadow); }
   .cards { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
-  .card { display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; color: #fff;
-    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.5);
-    backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 14px 34px rgba(4,50,60,0.28);
-    transition: transform 0.25s ease, background 0.25s ease; }
-  .card:hover { transform: translateY(-3px); background: rgba(255,255,255,0.24); }
+  .card { display: flex; flex-direction: column; border-radius: 20px; overflow: hidden; padding: 6px; }
   .card.hidden { display: none; }
-  .thumb { position: relative; aspect-ratio: 16 / 9; background: rgba(4,50,60,0.25); overflow: hidden; }
+  .thumb { position: relative; aspect-ratio: 16 / 9; background: rgba(4,50,60,0.25); overflow: hidden; border-radius: 14px; }
   .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .thumb .emoji { width: 100%; height: 100%; display: grid; place-items: center; font-size: 56px; background: linear-gradient(160deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08)); }
   .badge { position: absolute; left: 10px; top: 10px; padding: 4px 8px; border-radius: 999px; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500;
     background: rgba(4,50,60,0.55); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   .badge.upcoming { left: auto; right: 10px; background: #fff; color: var(--deep); }
-  .card .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .card .body { padding: 12px 12px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
   .card .meta { display: flex; gap: 10px; align-items: baseline; font-size: 10px; letter-spacing: 0.12em; color: rgba(255,255,255,0.85); text-transform: uppercase; }
   .card .meta .venue { text-transform: none; letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .card h3 { font-family: var(--font-j); font-size: 15px; font-weight: 500; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .more { max-width: 1120px; margin: 28px auto 0; display: flex; justify-content: center; }
-  .more button { font: inherit; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #fff; cursor: pointer;
-    padding: 14px 28px; border-radius: 999px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.55);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 10px 26px rgba(4,50,60,0.28); }
-  .more button:hover { background: rgba(255,255,255,0.28); }
+  .more button { font: inherit; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer; border: 0; padding: 16px 32px; }
 
   @media (max-width: 900px) { .depth { display: none; } }
   @media (max-width: 640px) {
     header, footer { padding: 22px 20px; font-size: 10px; letter-spacing: 0.14em; }
     .recent { padding: 8px 16px 64px; }
     .cards { grid-template-columns: 1fr 1fr; gap: 10px; }
-    .card .body { padding: 10px 12px 12px; }
+    .card { padding: 4px; border-radius: 16px; }
+    .thumb { border-radius: 12px; }
+    .card .body { padding: 8px 8px 10px; }
     .card h3 { font-size: 13px; }
     .thumb .emoji { font-size: 40px; }
     header { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -171,10 +184,10 @@
       <h1>mozumasu</h1>
       <p class="lede"><b>CLI</b>と<b>キーボード</b>のオタク。<br>X <a href="https://x.com/mozumasu" rel="me"><b>@mozumasu</b></a> · GitHub <a href="https://github.com/mozumasu" rel="me"><b>mozumasu</b></a></p>
       <nav class="tiles" aria-label="sites">
-        <a class="tile primary" href="https://talks.mozumasu.com/">Talks <small>talks.mozumasu.com</small></a>
-        <span class="tile soon" aria-disabled="true">Blog <small>coming soon</small></span>
-        <a class="tile" href="https://x.com/mozumasu" rel="me">X <small>@mozumasu</small></a>
-        <a class="tile" href="https://github.com/mozumasu" rel="me">GitHub <small>mozumasu</small></a>
+        <a class="tile glass primary" href="https://talks.mozumasu.com/">Talks <small>talks.mozumasu.com</small></a>
+        <span class="tile glass soon" aria-disabled="true">Blog <small>coming soon</small></span>
+        <a class="tile glass" href="https://x.com/mozumasu" rel="me">X <small>@mozumasu</small></a>
+        <a class="tile glass" href="https://github.com/mozumasu" rel="me">GitHub <small>mozumasu</small></a>
       </nav>
     </main>
     </div>
@@ -182,7 +195,7 @@
     <section class="recent" id="recent" hidden>
       <div class="head"><h2>Recent</h2><small>登壇 · 出演 · 記事</small></div>
       <div class="cards" id="cards"></div>
-      <div class="more" id="more" hidden><button type="button" id="more-btn">すべて見る</button></div>
+      <div class="more" id="more" hidden><button type="button" id="more-btn" class="glass">すべて見る</button></div>
     </section>
 
     <footer>
@@ -212,18 +225,25 @@
         : `<div class="emoji" aria-hidden="true">${esc(it.emoji || "🐱")}</div>`;
       const upcoming = it.date > today ? `<span class="badge upcoming">upcoming</span>` : "";
       const venue = it.venue ? `<span class="venue">${esc(it.venue)}</span>` : "";
-      return `<a class="card${i >= INITIAL ? " hidden" : ""}" href="${esc(it.url)}">
+      return `<a class="card glass${i >= INITIAL ? " hidden" : ""}" href="${esc(it.url)}">
         <div class="thumb">${thumb}<span class="badge">${LABEL[it.type] || esc(it.type)}</span>${upcoming}</div>
         <div class="body"><div class="meta"><time datetime="${esc(it.date)}">${esc(it.date.replace(/-/g, "."))}</time>${venue}</div><h3>${esc(it.title)}</h3></div>
       </a>`;
     }).join("");
+    // a thumbnail that fails to load falls back to the emoji tile
+    cards.querySelectorAll(".thumb img").forEach((img) => img.addEventListener("error", () => {
+      const it = items[[...cards.children].indexOf(img.closest(".card"))];
+      img.replaceWith(Object.assign(document.createElement("div"), { className: "emoji", textContent: (it && it.emoji) || "🐱" }));
+    }));
     document.getElementById("recent").hidden = false;
+    document.dispatchEvent(new Event("glasschange"));
     if (items.length > INITIAL) {
       const more = document.getElementById("more");
       more.hidden = false;
       document.getElementById("more-btn").addEventListener("click", () => {
         cards.querySelectorAll(".card.hidden").forEach((el) => el.classList.remove("hidden"));
         more.hidden = true;
+        document.dispatchEvent(new Event("glasschange"));
       });
     }
   })();
@@ -232,6 +252,12 @@
 precision highp float;
 uniform vec2 u_res;
 uniform float u_time;
+uniform float u_dpr;
+// glass slabs, taken from the DOM every frame: center.xy + half-size.xy in canvas px (y up), corner radius
+const int MAXG = 16;
+uniform vec4 u_rects[MAXG];
+uniform float u_radii[MAXG];
+uniform int u_count;
 
 float hash21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float vnoise(vec2 p) {
@@ -246,24 +272,22 @@ float fbm(vec2 p) {
 }
 // flow runs diagonally (upper-left -> lower-right)
 const vec2 DIR = vec2(0.92, -0.39);
-float height(vec2 p, float t) {
+// detail < 1 damps the fine wrinkles: used for the frosted look behind glass
+float height(vec2 p, float t, float detail) {
   vec2 perp = vec2(-DIR.y, DIR.x);
   vec2 s = vec2(dot(p, DIR), dot(p, perp));
   float h = 0.0;
   h += 0.60 * fbm(s * vec2(0.55, 3.8) + vec2(-t * 0.30, t * 0.08));           // long swells, stretched along flow
   vec2 w = vec2(fbm(p * 3.0 + t * 0.18), fbm(p * 3.0 - t * 0.14 + 7.3));      // domain warp
   h += 0.26 * fbm(s * vec2(3.2, 6.5) + 1.2 * w + vec2(t * 0.22, -t * 0.18));
-  h += 0.09 * fbm(p * 13.0 + 3.0 * w - vec2(t * 0.55, t * 0.35));             // fine wrinkles
+  h += 0.09 * detail * fbm(p * 13.0 + 3.0 * w - vec2(t * 0.55, t * 0.35));    // fine wrinkles
   return h;
 }
-void main() {
-  vec2 uv = gl_FragCoord.xy / u_res;
-  vec2 p = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
-  float t = u_time;
+vec3 water(vec2 p, vec2 uv, float t, float detail) {
   float e = 0.0035;
-  float h  = height(p, t);
-  float hx = height(p + vec2(e, 0.0), t);
-  float hy = height(p + vec2(0.0, e), t);
+  float h  = height(p, t, detail);
+  float hx = height(p + vec2(e, 0.0), t, detail);
+  float hy = height(p + vec2(0.0, e), t, detail);
   vec3 n = normalize(vec3(-(hx - h) / e * 0.28, -(hy - h) / e * 0.28, 1.0));
   vec3 V = vec3(0.0, 0.0, 1.0);
   vec3 L = normalize(vec3(-0.45, 0.75, 0.55));
@@ -295,10 +319,60 @@ void main() {
   // sun glints on the crests
   vec3 H = normalize(L + V);
   float spec = pow(max(dot(n, H), 0.0), 240.0);
-  float sparkle = smoothstep(0.5, 0.85, vnoise(p * 70.0 + t * 1.5));
+  float sparkle = smoothstep(0.5, 0.85, vnoise(p * 70.0 + t * 1.5)) * detail;
   col += spec * (0.7 + 1.6 * sparkle);
   col += dark * sparkle * smoothstep(0.4, 0.6, vnoise(p * 30.0 - t)) * 0.35;
+  return col;
+}
+float sdRoundBox(vec2 q, vec2 b, float r) {
+  vec2 d = abs(q) - b + vec2(r);
+  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
+}
+void main() {
+  vec2 fc = gl_FragCoord.xy;
+  vec2 uv = fc / u_res;
+  vec2 p = (fc - 0.5 * u_res) / u_res.y;
+  float t = u_time;
+  vec3 col = water(p, uv, t, 1.0);
 
+  // nearest glass slab under this pixel
+  float sd = 1e9; vec2 dir = vec2(0.0); float hs = 1.0;
+  for (int i = 0; i < MAXG; i++) {
+    if (i >= u_count) break;
+    vec4 r = u_rects[i];
+    vec2 q = fc - r.xy;
+    float s = sdRoundBox(q, r.zw, u_radii[i]);
+    if (s < sd) {
+      sd = s; hs = min(r.z, r.w);
+      vec2 g = vec2(sdRoundBox(q + vec2(1.0, 0.0), r.zw, u_radii[i]) - s, sdRoundBox(q + vec2(0.0, 1.0), r.zw, u_radii[i]) - s);
+      dir = normalize(g + vec2(1e-4, 0.0));
+    }
+  }
+  if (sd < 1.0) {
+    float cover = 1.0 - smoothstep(-1.0, 1.0, sd);
+    float edgeW = min(16.0 * u_dpr, 0.42 * hs);    // width of the refracting rim, px (kept small on small slabs)
+    float rim = 1.0 - smoothstep(0.0, edgeW, -sd);   // 1 on the edge -> 0 inside
+    float bend = pow(rim, 1.7);
+    // thick glass: the rim bends the water inward, each channel a little differently (dispersion);
+    // the core is frosted (fewer wrinkles) and lifted toward white
+    vec3 gcol;
+    if (bend > 0.01) {
+      float k = min(22.0 * u_dpr, 0.6 * hs) / u_res.y;
+      gcol.r = water(p - dir * bend * k * 0.90, uv, t, 0.4).r;
+      gcol.g = water(p - dir * bend * k * 1.00, uv, t, 0.4).g;
+      gcol.b = water(p - dir * bend * k * 1.10, uv, t, 0.4).b;
+    } else {
+      gcol = water(p, uv, t, 0.4);
+    }
+    gcol = mix(gcol, vec3(1.0), 0.16) * 1.03;
+    vec2 sun = normalize(vec2(-0.6, 0.8));
+    float facing = dot(dir, sun);
+    gcol += pow(rim, 3.0) * (0.35 + 0.65 * max(facing, 0.0)) * 0.6;   // bright rim toward the light
+    gcol -= pow(rim, 2.0) * max(-facing, 0.0) * 0.22;                  // shaded rim on the far side
+    float band = smoothstep(edgeW * 0.55, edgeW * 0.7, -sd) * (1.0 - smoothstep(edgeW * 0.85, edgeW, -sd));
+    gcol += band * 0.08;                                               // faint inner line = slab thickness
+    col = mix(col, gcol, cover);
+  }
   gl_FragColor = vec4(pow(col, vec3(0.96)), 1.0);
 }
 </script>
@@ -317,7 +391,34 @@ void main() {
     const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
     const a = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-    const uRes = gl.getUniformLocation(prog, 'u_res'), uTime = gl.getUniformLocation(prog, 'u_time');
+    const uRes = gl.getUniformLocation(prog, 'u_res'), uTime = gl.getUniformLocation(prog, 'u_time'), uDpr = gl.getUniformLocation(prog, 'u_dpr');
+    const uRects = gl.getUniformLocation(prog, 'u_rects'), uRadii = gl.getUniformLocation(prog, 'u_radii'), uCount = gl.getUniformLocation(prog, 'u_count');
+
+    // glass slabs are rendered by the shader; the DOM only keeps the rim/sheen and the fallback look
+    document.body.classList.add('glassgl');
+    const MAXG = 16, rects = new Float32Array(MAXG * 4), radii = new Float32Array(MAXG);
+    let glassEls = [];
+    const refreshGlass = () => {
+      glassEls = [...document.querySelectorAll('.glass:not(.primary)')];
+      for (const el of glassEls) el._r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+    };
+    refreshGlass();
+    document.addEventListener('glasschange', () => { refreshGlass(); if (fixed !== null || reduced) draw(fixed !== null ? +fixed : 2.5); });
+    const updateRects = (dpr) => {
+      let n = 0;
+      for (const el of glassEls) {
+        if (n >= MAXG) break;
+        const b = el.getBoundingClientRect();
+        if (b.width === 0 || b.bottom < 0 || b.top > innerHeight) continue;
+        rects[n * 4] = (b.left + b.width / 2) * dpr;
+        rects[n * 4 + 1] = canvas.height - (b.top + b.height / 2) * dpr;
+        rects[n * 4 + 2] = b.width / 2 * dpr;
+        rects[n * 4 + 3] = b.height / 2 * dpr;
+        radii[n] = Math.min(el._r, b.width / 2, b.height / 2) * dpr;
+        n++;
+      }
+      gl.uniform4fv(uRects, rects); gl.uniform1fv(uRadii, radii); gl.uniform1i(uCount, n);
+    };
 
     // ?t=<sec> renders one fixed frame, ?og=1 strips the chrome (used for the OGP image and screenshots)
     const params = new URLSearchParams(location.search);
@@ -327,7 +428,7 @@ void main() {
     const dpr = fixed !== null ? window.devicePixelRatio : Math.min(window.devicePixelRatio || 1, innerWidth < 720 ? 1 : 1.5);
     const resize = () => { canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr); gl.viewport(0, 0, canvas.width, canvas.height); };
     resize(); addEventListener('resize', () => { resize(); if (fixed !== null || reduced) draw(fixed !== null ? +fixed : 2.5); });
-    const draw = (t) => { gl.uniform2f(uRes, canvas.width, canvas.height); gl.uniform1f(uTime, t); gl.drawArrays(gl.TRIANGLES, 0, 3); };
+    const draw = (t) => { gl.uniform2f(uRes, canvas.width, canvas.height); gl.uniform1f(uTime, t); gl.uniform1f(uDpr, dpr); updateRects(dpr); gl.drawArrays(gl.TRIANGLES, 0, 3); };
     // the WebGL buffer is only presented from a frame callback, so even a single frame goes through rAF
     if (fixed !== null || reduced) { requestAnimationFrame(() => draw(fixed !== null ? +fixed : 2.5)); return; }
     const t0 = performance.now();
