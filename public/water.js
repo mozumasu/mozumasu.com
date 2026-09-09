@@ -8,6 +8,9 @@ precision highp float;
 uniform vec2 u_res;
 uniform float u_time;
 uniform float u_dpr;
+uniform float u_glass;   // 0..1: slabs fade out while the page scrolls (the canvas trails the DOM by a frame)
+uniform float u_disp;    // 1: per-channel refraction (dispersion), 0: single sample (mobile)
+uniform int u_oct;       // fbm octaves (5 desktop, 4 mobile)
 // glass slabs, taken from the DOM every frame: center.xy + half-size.xy in canvas px (y up), corner radius
 const int MAXG = 16;
 uniform vec4 u_rects[MAXG];
@@ -22,7 +25,7 @@ float vnoise(vec2 p) {
 }
 float fbm(vec2 p) {
   float v = 0.0, a = 0.5; mat2 m = mat2(0.8, 0.6, -0.6, 0.8);
-  for (int i = 0; i < 5; i++) { v += a * vnoise(p); p = m * p * 2.0 + vec2(1.7); a *= 0.5; }
+  for (int i = 0; i < 5; i++) { if (i >= u_oct) break; v += a * vnoise(p); p = m * p * 2.0 + vec2(1.7); a *= 0.5; }
   return v;
 }
 // flow runs diagonally (upper-left -> lower-right)
@@ -103,7 +106,7 @@ void main() {
       dir = normalize(g + vec2(1e-4, 0.0));
     }
   }
-  if (sd < 10.0 * u_dpr) {
+  if (sd < 10.0 * u_dpr && u_glass > 0.01) {
     float cover = 1.0 - smoothstep(-1.0, 1.0, sd);
     float edgeW = min(14.0 * u_dpr, 0.4 * hs);     // width of the refracting rim, px (kept small on small slabs)
     float rim = 1.0 - smoothstep(0.0, edgeW, -sd);   // 1 on the edge -> 0 inside
@@ -114,13 +117,13 @@ void main() {
     // the rim bends it inward, each channel a little differently (dispersion)
     vec2 lens = qn * 0.035 / u_res.y;
     vec3 gcol;
-    if (bend > 0.01) {
-      float k = min(28.0 * u_dpr, 0.7 * hs) / u_res.y;
+    float k = min(28.0 * u_dpr, 0.7 * hs) / u_res.y;
+    if (bend > 0.01 && u_disp > 0.5) {
       gcol.r = water(p - lens - dir * bend * k * 0.88, uv, t, 0.75).r;
       gcol.g = water(p - lens - dir * bend * k * 1.00, uv, t, 0.75).g;
       gcol.b = water(p - lens - dir * bend * k * 1.12, uv, t, 0.75).b;
     } else {
-      gcol = water(p - lens, uv, t, 0.75);
+      gcol = water(p - lens - dir * bend * k, uv, t, 0.75);
     }
     gcol = mix(gcol, vec3(1.0), 0.07) * 1.02;
     gcol += pow(rim, 4.0) * (0.25 + 0.75 * max(facing, 0.0)) * 0.7;            // specular on the rim facing the light
@@ -128,83 +131,186 @@ void main() {
     gcol -= pow(rim, 1.5) * (1.0 - abs(facing)) * 0.06;                        // sides a touch darker
     float gloss = smoothstep(0.2, 0.55, vpos) * (1.0 - smoothstep(0.7, 0.95, vpos));
     gcol += gloss * 0.10;                                                       // soft reflection streak near the top
-    col = mix(col, gcol, cover);
-    // 1px specular outline on the boundary, drawn here (not in CSS) so it can never drift from the slab
-    float line = 1.0 - smoothstep(0.0, 1.2 * u_dpr, abs(sd + 0.6 * u_dpr));
-    col = mix(col, vec3(1.0), line * (0.35 + 0.55 * max(facing, 0.0)));
+    col = mix(col, gcol, cover * u_glass);
     // light focused through the slab lands just outside its far edge
     float halo = (1.0 - smoothstep(0.0, 10.0 * u_dpr, sd)) * step(0.0, sd) * max(-facing, 0.0);
-    col += halo * 0.16 * vec3(0.95, 1.0, 1.0);
+    col += halo * 0.16 * u_glass * vec3(0.95, 1.0, 1.0);
   }
   gl_FragColor = vec4(pow(col, vec3(0.96)), 1.0);
 }
 `;
 
-  const canvas = document.getElementById('water');
+  const canvas = document.getElementById("water");
   if (!canvas) return;
-  const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
-  if (!gl) { canvas.remove(); return; }   // the body gradient stays as the fallback
-  const vs = 'attribute vec2 a; void main(){ gl_Position = vec4(a, 0.0, 1.0); }';
-  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const gl = canvas.getContext("webgl", {
+    antialias: false,
+    alpha: false,
+    powerPreference: "low-power",
+  });
+  if (!gl) {
+    canvas.remove();
+    return;
+  } // the body gradient stays as the fallback
+  const vs =
+    "attribute vec2 a; void main(){ gl_Position = vec4(a, 0.0, 1.0); }";
+  const sh = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  };
   const prog = gl.createProgram();
-  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG)); gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { canvas.remove(); return; }
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    canvas.remove();
+    return;
+  }
   gl.useProgram(prog);
-  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
-  const a = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-  const uRes = gl.getUniformLocation(prog, 'u_res'), uTime = gl.getUniformLocation(prog, 'u_time'), uDpr = gl.getUniformLocation(prog, 'u_dpr');
-  const uRects = gl.getUniformLocation(prog, 'u_rects'), uRadii = gl.getUniformLocation(prog, 'u_radii'), uCount = gl.getUniformLocation(prog, 'u_count');
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([-1, -1, 3, -1, -1, 3]),
+    gl.STATIC_DRAW,
+  );
+  const a = gl.getAttribLocation(prog, "a");
+  gl.enableVertexAttribArray(a);
+  gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+  const uRes = gl.getUniformLocation(prog, "u_res"),
+    uTime = gl.getUniformLocation(prog, "u_time"),
+    uDpr = gl.getUniformLocation(prog, "u_dpr");
+  const uRects = gl.getUniformLocation(prog, "u_rects"),
+    uRadii = gl.getUniformLocation(prog, "u_radii"),
+    uCount = gl.getUniformLocation(prog, "u_count");
+  const uGlass = gl.getUniformLocation(prog, "u_glass"),
+    uDisp = gl.getUniformLocation(prog, "u_disp"),
+    uOct = gl.getUniformLocation(prog, "u_oct");
 
   const params = new URLSearchParams(location.search);
-  const fixed = params.get('t');
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fixed = params.get("t");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const still = fixed !== null || reduced;
   const stillTime = fixed !== null ? +fixed : 2.5;
-  const dpr = fixed !== null ? window.devicePixelRatio : Math.min(window.devicePixelRatio || 1, innerWidth < 720 ? 1 : 1.5);
+  // phones get a cheaper shader: lower resolution, 4 octaves, no dispersion, 30 fps
+  const mobile = innerWidth < 720 || matchMedia("(pointer: coarse)").matches;
+  const dpr =
+    fixed !== null
+      ? window.devicePixelRatio
+      : mobile
+        ? 0.7
+        : Math.min(window.devicePixelRatio || 1, 1.0);
+  const frameMs = mobile ? 30 : 0;
+  gl.uniform1f(uDisp, mobile ? 0 : 1);
+  gl.uniform1i(uOct, mobile ? 4 : 5);
 
-  // glass slabs are rendered by the shader; the DOM only keeps text and shadow (see brand.css)
-  document.body.classList.add('glassgl');
-  const MAXG = 16, rects = new Float32Array(MAXG * 4), radii = new Float32Array(MAXG);
+  // glass slabs are rendered by the shader on top of the CSS frost (see brand.css)
+  document.body.classList.add("glassgl");
+  const MAXG = 16,
+    rects = new Float32Array(MAXG * 4),
+    radii = new Float32Array(MAXG);
   let glassEls = [];
+  // element boxes are cached in document space so a frame never reads layout; only the scroll offset is applied per frame
   const refreshGlass = () => {
-    glassEls = [...document.querySelectorAll('.glass:not(.primary)')];
-    for (const el of glassEls) el._r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+    glassEls = [...document.querySelectorAll(".glass:not(.primary)")]
+      .map((el) => {
+        const b = el.getBoundingClientRect();
+        return {
+          x: b.left + scrollX,
+          y: b.top + scrollY,
+          w: b.width,
+          h: b.height,
+          r: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0,
+        };
+      })
+      .filter((g) => g.w > 0);
   };
+  let sx = 1,
+    sy = 1;
   const updateRects = () => {
-    // map CSS px to canvas px through the canvas' own box (a classic scrollbar makes it narrower than innerWidth)
-    const c = canvas.getBoundingClientRect();
-    const sx = canvas.width / c.width, sy = canvas.height / c.height;
+    const vx = scrollX,
+      vy = scrollY,
+      vh = canvas.clientHeight;
     let n = 0;
-    for (const el of glassEls) {
+    for (const g of glassEls) {
       if (n >= MAXG) break;
-      const b = el.getBoundingClientRect();
-      if (b.width === 0 || b.bottom < c.top || b.top > c.bottom) continue;
-      rects[n * 4] = (b.left - c.left + b.width / 2) * sx;
-      rects[n * 4 + 1] = canvas.height - (b.top - c.top + b.height / 2) * sy;
-      rects[n * 4 + 2] = b.width / 2 * sx;
-      rects[n * 4 + 3] = b.height / 2 * sy;
-      radii[n] = Math.min(el._r, b.width / 2, b.height / 2) * sx;
+      const top = g.y - vy;
+      if (top + g.h < 0 || top > vh) continue;
+      rects[n * 4] = (g.x - vx + g.w / 2) * sx;
+      rects[n * 4 + 1] = canvas.height - (top + g.h / 2) * sy;
+      rects[n * 4 + 2] = (g.w / 2) * sx;
+      rects[n * 4 + 3] = (g.h / 2) * sy;
+      radii[n] = Math.min(g.r, g.w / 2, g.h / 2) * sx;
       n++;
     }
-    gl.uniform4fv(uRects, rects); gl.uniform1fv(uRadii, radii); gl.uniform1i(uCount, n);
+    gl.uniform4fv(uRects, rects);
+    gl.uniform1fv(uRadii, radii);
+    gl.uniform1i(uCount, n);
   };
 
-  const resize = () => { canvas.width = Math.floor(canvas.clientWidth * dpr); canvas.height = Math.floor(canvas.clientHeight * dpr); gl.viewport(0, 0, canvas.width, canvas.height); };
-  const draw = (t) => { gl.uniform2f(uRes, canvas.width, canvas.height); gl.uniform1f(uTime, t); gl.uniform1f(uDpr, dpr); updateRects(); gl.drawArrays(gl.TRIANGLES, 0, 3); };
+  const resize = () => {
+    canvas.width = Math.floor(canvas.clientWidth * dpr);
+    canvas.height = Math.floor(canvas.clientHeight * dpr);
+    // map CSS px to canvas px through the canvas' own box (a classic scrollbar makes it narrower than innerWidth)
+    sx = canvas.width / canvas.clientWidth;
+    sy = canvas.height / canvas.clientHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    refreshGlass();
+  };
+  // while the page scrolls the canvas trails the DOM by a frame, so the slabs fade out and return once it settles
+  let lastScroll = -1e9;
+  addEventListener("scroll", () => { lastScroll = performance.now(); }, { passive: true });
+  const glassAmount = (now) =>
+    still ? 1 : Math.min(1, Math.max(0, (now - lastScroll - 120) / 220));
+
+  const draw = (t) => {
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.uniform1f(uTime, t);
+    gl.uniform1f(uDpr, dpr);
+    gl.uniform1f(uGlass, glassAmount(performance.now()));
+    updateRects();
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
   // the WebGL buffer is only presented from a frame callback, so even a single frame goes through rAF
   const drawStill = () => requestAnimationFrame(() => draw(stillTime));
 
-  refreshGlass(); resize();
-  addEventListener('resize', () => { resize(); if (still) drawStill(); });
-  document.addEventListener('glasschange', () => { refreshGlass(); if (still) drawStill(); });
-  if (still) { drawStill(); return; }
+  resize();
+  addEventListener("resize", () => {
+    resize();
+    if (still) drawStill();
+  });
+  const relayout = () => {
+    refreshGlass();
+    if (still) drawStill();
+  };
+  document.addEventListener("glasschange", relayout);
+  addEventListener("load", relayout);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+  setInterval(refreshGlass, 1000); // cheap safety net for layout shifts nothing above catches
+  if (still) {
+    drawStill();
+    return;
+  }
 
   const t0 = performance.now();
-  let raf = 0;
-  const loop = () => { draw((performance.now() - t0) / 1000); raf = requestAnimationFrame(loop); };
-  const start = () => { if (!raf) raf = requestAnimationFrame(loop); };
-  const stop = () => { cancelAnimationFrame(raf); raf = 0; };
-  document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+  let raf = 0,
+    lastFrame = 0;
+  const loop = (now) => {
+    raf = requestAnimationFrame(loop);
+    if (now - lastFrame < frameMs) return;
+    lastFrame = now;
+    draw((now - t0) / 1000);
+  };
+  const start = () => {
+    if (!raf) raf = requestAnimationFrame(loop);
+  };
+  const stop = () => {
+    cancelAnimationFrame(raf);
+    raf = 0;
+  };
+  document.addEventListener("visibilitychange", () =>
+    document.hidden ? stop() : start(),
+  );
   start();
 })();
