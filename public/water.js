@@ -196,7 +196,7 @@ void main() {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const still = fixed !== null || reduced;
   const stillTime = fixed !== null ? +fixed : 2.5;
-  // phones get a cheaper shader: lower resolution, 4 octaves, no dispersion, 30 fps
+  // phones get a cheaper shader: lower resolution, 4 octaves, 30 fps (dispersion is rim-only and cheap, so it stays)
   const mobile = innerWidth < 720 || matchMedia("(pointer: coarse)").matches;
   const scale =
     fixed !== null
@@ -205,7 +205,7 @@ void main() {
         ? 0.7
         : Math.min(window.devicePixelRatio || 1, 1.0);
   const frameMs = mobile ? 30 : 0;
-  gl.uniform1f(uDisp, mobile ? 0 : 1);
+  gl.uniform1f(uDisp, 1);
   gl.uniform1i(uOct, mobile ? 4 : 5);
   gl.uniform1f(uGlass, 1);
 

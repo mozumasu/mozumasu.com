@@ -122,7 +122,7 @@ a.glass.primary:hover { background: #fff; }
   .card h3 { font-size: 13px; }
   .thumb .emoji { font-size: 40px; }
   /* backdrop blur on every card is too much for phones; the shader's frost is enough */
-  body.glassgl .glass:not(.primary) { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,0.13); }
+  body.glassgl .glass:not(.primary) { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,0.06); }
   /* backdrop blur on badges and the blend-mode grain make the compositor redraw every scroll frame on iOS */
   .badge { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(4,50,60,0.7); }
   .grain { display: none; }
