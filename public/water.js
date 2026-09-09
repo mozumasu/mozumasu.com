@@ -330,30 +330,27 @@ void main() {
     return;
   }
 
-  // Nothing is drawn while the page scrolls: the canvas travels with the content, so the frozen water still
-  // scrolls smoothly, and the GPU is left to the compositor. The animation clock stops too, so the first frame
-  // after a scroll repaints exactly what was on screen and the water resumes without a jump.
-  let lastScroll = -1e9;
-  addEventListener(
-    "scroll",
-    () => {
-      lastScroll = performance.now();
-    },
-    { passive: true },
-  );
-  let raf = 0,
-    lastFrame = 0,
-    lastNow = performance.now(),
-    clock = 0;
-  const loop = (now) => {
-    raf = requestAnimationFrame(loop);
-    const scrolling = now - lastScroll < 150;
-    if (!scrolling) clock += now - lastNow;
-    lastNow = now;
-    if (scrolling || now - lastFrame < frameMs) return;
-    lastFrame = now;
-    draw(clock / 1000);
-  };
+// The water keeps moving while the page scrolls: the canvas travels with the content, so nothing can drift.
+// Phones drop to 15 fps during a scroll to leave more of the GPU to the compositor.
+let lastScroll = -1e9;
+addEventListener(
+  "scroll",
+  () => {
+    lastScroll = performance.now();
+  },
+  { passive: true },
+);
+let raf = 0,
+  lastFrame = 0;
+const t0 = performance.now();
+const loop = (now) => {
+  raf = requestAnimationFrame(loop);
+  const scrolling = now - lastScroll < 150;
+  const interval = scrolling && mobile ? 66 : frameMs;
+  if (now - lastFrame < interval) return;
+  lastFrame = now;
+  draw((now - t0) / 1000);
+};
   const start = () => {
     if (!raf) raf = requestAnimationFrame(loop);
   };
