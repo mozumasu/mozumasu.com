@@ -9,7 +9,9 @@
 - **`brand.css` / `water.js` / `icon-64.png` は talks.mozumasu.com からも直接読まれている**
   (`mozumasu/talks` の `scripts/index-page.mjs`)。クラス名、`#water` キャンバスの前提、
   `glasschange` イベントの契約を変えるときは talks 側も同時に直す
-- `water.js` は水面をドキュメント全体に重ねたキャンバスに描き、`.glass` 要素の位置にガラス板を描く。
+- `water.js` はキャンバス 2 枚で描く。水面はビューポート固定のキャンバス (JS が生成、模様は画面に固定)、
+  ガラス板は `#water` (ドキュメント全体に重ねた透明キャンバス) に `.glass` 要素の矩形だけを描く。
+  板を固定キャンバスに描くとスクロール中に要素から 1 フレーム遅れて見えるので、この分担は崩さない。
   要素側に `filter` や `mask` を足すと GPU 合成で四角い影が出る。見た目の効果はシェーダー側に寄せる
 - `public/activities.json` は手書き。`thumb` を空にして `pnpm thumbs` で og:image を埋める
 - `mockups/` はデザイン検討時のモック。配信されない。参考にはなるが古い

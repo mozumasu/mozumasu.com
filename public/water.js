@@ -1,22 +1,27 @@
-// mozumasu.com / talks.mozumasu.com 共通の背景。水面を WebGL で描き、.glass 要素の位置に厚いガラス板を描く。
+// mozumasu.com / talks.mozumasu.com 共通の背景。水面と .glass 要素のガラス板を WebGL で描く。
 // 使い方: <canvas id="water" class="bg"></canvas> を置き、このファイルを defer で読む。
 // .glass 要素を後から追加したら document.dispatchEvent(new Event("glasschange")) で知らせる。
 // ?t=<秒> で固定フレーム (スクリーンショット用)。prefers-reduced-motion では 1 フレームだけ描く。
+//
+// キャンバスは 2 枚:
+// - 水面: このファイルが作るビューポート固定のキャンバス。模様は画面に固定で、スクロール位置に依存しない
+// - ガラス板: #water。ドキュメント全体に重ねた透明なキャンバスに、板の矩形だけを描く。コンポジタが DOM ごと
+//   動かすので板は要素から遅れない。板の中の水面は画面座標で参照するためスクロール中は 1 フレーム遅れるが、
+//   屈折で曲げた内側なので見えない
 (() => {
   const FRAG = `
 precision highp float;
-uniform vec2 u_res;
 uniform float u_time;
-uniform float u_dpr;
-uniform float u_glass;   // 0..1: strength of the slabs (1 unless a page wants them off)
-uniform vec4 u_view;     // visible viewport in canvas px: x, y (bottom-up), w, h. The canvas covers the whole document
-uniform float u_disp;    // 1: per-channel refraction (dispersion), 0: single sample (mobile)
+uniform float u_dpr;     // canvas px per CSS px
+uniform vec2 u_vp;       // viewport in CSS px. The height is the large viewport (100lvh): the phone's address bar must not rescale the pattern
+uniform vec2 u_org;      // canvas px (y up) of the viewport's bottom-left corner
 uniform int u_oct;       // fbm octaves (5 desktop, 4 mobile)
-// glass slabs, taken from the DOM every frame: center.xy + half-size.xy in canvas px (y up), corner radius
-const int MAXG = 16;
-uniform vec4 u_rects[MAXG];
-uniform float u_radii[MAXG];
-uniform int u_count;
+#ifdef GLASS
+uniform float u_glass;   // 0..1: strength of the slabs (1 unless a page wants them off)
+uniform float u_disp;    // 1: per-channel refraction (dispersion), 0: single sample
+varying vec4 v_rect;     // slab center.xy + half-size.xy in canvas px (y up)
+varying float v_radius;  // corner radius, canvas px
+#endif
 
 float hash21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float vnoise(vec2 p) {
@@ -89,107 +94,131 @@ float sdRoundBox(vec2 q, vec2 b, float r) {
 }
 void main() {
   vec2 fc = gl_FragCoord.xy;
-  // the water is painted on the page (it scrolls with the content); only the tint gradient follows the viewport
-  vec2 uv = (fc - u_view.xy) / u_view.zw;
-  vec2 p = (fc - 0.5 * u_res) / u_view.w;
+  vec2 sc = (fc - u_org) / u_dpr;           // screen position in CSS px, y up
+  vec2 uv = sc / u_vp;                      // the tint gradient follows the viewport
+  vec2 p = (sc - 0.5 * u_vp) / u_vp.y;      // the pattern is fixed to the screen
   float t = u_time;
-  vec3 col = water(p, uv, t, 1.0);
-
-  // nearest glass slab under this pixel
-  float sd = 1e9; vec2 dir = vec2(0.0); float hs = 1.0; float vpos = 0.0; vec2 qn = vec2(0.0);
-  for (int i = 0; i < MAXG; i++) {
-    if (i >= u_count) break;
-    vec4 r = u_rects[i];
-    vec2 q = fc - r.xy;
-    float s = sdRoundBox(q, r.zw, u_radii[i]);
-    if (s < sd) {
-      sd = s; hs = min(r.z, r.w); vpos = q.y / r.w; qn = q;
-      vec2 g = vec2(sdRoundBox(q + vec2(1.0, 0.0), r.zw, u_radii[i]) - s, sdRoundBox(q + vec2(0.0, 1.0), r.zw, u_radii[i]) - s);
-      dir = normalize(g + vec2(1e-4, 0.0));
-    }
+#ifndef GLASS
+  gl_FragColor = vec4(pow(water(p, uv, t, 1.0), vec3(0.96)), 1.0);
+#else
+  vec2 q = fc - v_rect.xy;
+  float sd = sdRoundBox(q, v_rect.zw, v_radius);
+  if (sd >= 10.0 * u_dpr || u_glass < 0.01) discard;
+  vec2 g = vec2(sdRoundBox(q + vec2(1.0, 0.0), v_rect.zw, v_radius) - sd, sdRoundBox(q + vec2(0.0, 1.0), v_rect.zw, v_radius) - sd);
+  vec2 dir = normalize(g + vec2(1e-4, 0.0));
+  float hs = min(v_rect.z, v_rect.w);
+  float vpos = q.y / v_rect.w;
+  float cover = 1.0 - smoothstep(-1.0, 1.0, sd);
+  float edgeW = min(14.0 * u_dpr, 0.4 * hs);     // width of the refracting rim, px (kept small on small slabs)
+  float rim = 1.0 - smoothstep(0.0, edgeW, -sd);   // 1 on the edge -> 0 inside
+  float bend = rim * rim * (3.0 - 2.0 * rim);
+  vec2 sun = normalize(vec2(-0.6, 0.8));
+  float facing = dot(dir, sun);
+  float vh = u_vp.y * u_dpr;                       // viewport height in canvas px
+  // thick clear glass: the core is a slightly magnified, barely frosted view of the water;
+  // the rim bends it inward, each channel a little differently (dispersion)
+  vec2 lens = q * 0.035 / vh;
+  vec3 gcol;
+  float k = min(28.0 * u_dpr, 0.7 * hs) / vh;
+  if (bend > 0.01 && u_disp > 0.5) {
+    gcol.r = water(p - lens - dir * bend * k * 0.88, uv, t, 0.75).r;
+    gcol.g = water(p - lens - dir * bend * k * 1.00, uv, t, 0.75).g;
+    gcol.b = water(p - lens - dir * bend * k * 1.12, uv, t, 0.75).b;
+  } else {
+    gcol = water(p - lens - dir * bend * k, uv, t, 0.75);
   }
-  if (sd < 10.0 * u_dpr && u_glass > 0.01) {
-    float cover = 1.0 - smoothstep(-1.0, 1.0, sd);
-    float edgeW = min(14.0 * u_dpr, 0.4 * hs);     // width of the refracting rim, px (kept small on small slabs)
-    float rim = 1.0 - smoothstep(0.0, edgeW, -sd);   // 1 on the edge -> 0 inside
-    float bend = rim * rim * (3.0 - 2.0 * rim);
-    vec2 sun = normalize(vec2(-0.6, 0.8));
-    float facing = dot(dir, sun);
-    // thick clear glass: the core is a slightly magnified, barely frosted view of the water;
-    // the rim bends it inward, each channel a little differently (dispersion)
-    vec2 lens = qn * 0.035 / u_view.w;
-    vec3 gcol;
-    float k = min(28.0 * u_dpr, 0.7 * hs) / u_view.w;
-    if (bend > 0.01 && u_disp > 0.5) {
-      gcol.r = water(p - lens - dir * bend * k * 0.88, uv, t, 0.75).r;
-      gcol.g = water(p - lens - dir * bend * k * 1.00, uv, t, 0.75).g;
-      gcol.b = water(p - lens - dir * bend * k * 1.12, uv, t, 0.75).b;
-    } else {
-      gcol = water(p - lens - dir * bend * k, uv, t, 0.75);
-    }
-    gcol = mix(gcol, vec3(1.0), 0.07) * 1.02;
-    gcol += pow(rim, 4.0) * (0.25 + 0.75 * max(facing, 0.0)) * 0.7;            // specular on the rim facing the light
-    gcol += pow(rim, 3.0) * max(-facing, 0.0) * 0.35 * vec3(0.9, 1.0, 1.0);    // light leaking through the far edge
-    gcol -= pow(rim, 1.5) * (1.0 - abs(facing)) * 0.06;                        // sides a touch darker
-    float gloss = smoothstep(0.2, 0.55, vpos) * (1.0 - smoothstep(0.7, 0.95, vpos));
-    gcol += gloss * 0.10;                                                       // soft reflection streak near the top
-    col = mix(col, gcol, cover * u_glass);
-    // light focused through the slab lands just outside its far edge
-    float halo = (1.0 - smoothstep(0.0, 10.0 * u_dpr, sd)) * step(0.0, sd) * max(-facing, 0.0);
-    col += halo * 0.16 * u_glass * vec3(0.95, 1.0, 1.0);
-  }
-  gl_FragColor = vec4(pow(col, vec3(0.96)), 1.0);
+  gcol = mix(gcol, vec3(1.0), 0.07) * 1.02;
+  gcol += pow(rim, 4.0) * (0.25 + 0.75 * max(facing, 0.0)) * 0.7;            // specular on the rim facing the light
+  gcol += pow(rim, 3.0) * max(-facing, 0.0) * 0.35 * vec3(0.9, 1.0, 1.0);    // light leaking through the far edge
+  gcol -= pow(rim, 1.5) * (1.0 - abs(facing)) * 0.06;                        // sides a touch darker
+  float gloss = smoothstep(0.2, 0.55, vpos) * (1.0 - smoothstep(0.7, 0.95, vpos));
+  gcol += gloss * 0.10;                                                       // soft reflection streak near the top
+  gcol = pow(max(gcol, 0.0), vec3(0.96));
+  // light focused through the slab lands just outside its far edge
+  float halo = (1.0 - smoothstep(0.0, 10.0 * u_dpr, sd)) * step(0.0, sd) * max(-facing, 0.0);
+  // premultiplied alpha: the slab replaces the water, the halo is a faint bright veil over it
+  float a = cover * u_glass;
+  float ha = halo * 0.2 * u_glass;
+  gl_FragColor = vec4(gcol * a + vec3(0.95, 1.0, 1.0) * ha, a + ha);
+#endif
 }
 `;
+  const VS_WATER =
+    "attribute vec2 a_pos; void main(){ gl_Position = vec4(a_pos, 0.0, 1.0); }";
+  const VS_GLASS = `
+attribute vec2 a_pos; attribute vec4 a_rect; attribute float a_radius;
+uniform vec2 u_res;
+varying vec4 v_rect; varying float v_radius;
+void main(){ v_rect = a_rect; v_radius = a_radius; gl_Position = vec4(a_pos / u_res * 2.0 - 1.0, 0.0, 1.0); }`;
 
-  const canvas = document.getElementById("water");
-  if (!canvas) return;
-  const gl = canvas.getContext("webgl", {
-    antialias: false,
-    alpha: false,
-    powerPreference: "low-power",
-  });
-  if (!gl) {
-    canvas.remove();
-    return;
-  } // the body gradient stays as the fallback
-  const vs =
-    "attribute vec2 a; void main(){ gl_Position = vec4(a, 0.0, 1.0); }";
-  const sh = (type, src) => {
-    const s = gl.createShader(type);
-    gl.shaderSource(s, src);
-    gl.compileShader(s);
-    return s;
+  const glassCanvas = document.getElementById("water");
+  if (!glassCanvas) return;
+  const waterCanvas = document.createElement("canvas");
+  waterCanvas.className = "bg";
+  waterCanvas.setAttribute("aria-hidden", "true");
+  // 100lvh: the phone's address bar changes the visible height on every scroll. Sized to the large viewport the
+  // canvas is never reallocated; the rows under the bar are simply hidden
+  waterCanvas.style.height = "100vh";
+  waterCanvas.style.height = "100lvh";
+  glassCanvas.before(waterCanvas);
+  const bail = () => {
+    waterCanvas.remove();
+    glassCanvas.remove();
+  }; // the body gradient and the CSS glass stay as the fallback
+
+  const setup = (canvas, vs, defines, opts) => {
+    const gl = canvas.getContext("webgl", {
+      antialias: false,
+      powerPreference: "low-power",
+      ...opts,
+    });
+    if (!gl) return null;
+    const sh = (type, src) => {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      return s;
+    };
+    const prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, defines + FRAG));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+    gl.useProgram(prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    const u = (name) => gl.getUniformLocation(prog, name);
+    return { gl, prog, u };
   };
-  const prog = gl.createProgram();
-  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
-  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
-  gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    canvas.remove();
+  const W = setup(waterCanvas, VS_WATER, "", { alpha: false });
+  const G = setup(glassCanvas, VS_GLASS, "#define GLASS\n", { alpha: true });
+  if (!W || !G) {
+    bail();
     return;
   }
-  gl.useProgram(prog);
-  const buf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
+
+  // water: one full-screen triangle
+  W.gl.bufferData(
+    W.gl.ARRAY_BUFFER,
     new Float32Array([-1, -1, 3, -1, -1, 3]),
-    gl.STATIC_DRAW,
+    W.gl.STATIC_DRAW,
   );
-  const a = gl.getAttribLocation(prog, "a");
-  gl.enableVertexAttribArray(a);
-  gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-  const uRes = gl.getUniformLocation(prog, "u_res"),
-    uTime = gl.getUniformLocation(prog, "u_time"),
-    uDpr = gl.getUniformLocation(prog, "u_dpr");
-  const uRects = gl.getUniformLocation(prog, "u_rects"),
-    uRadii = gl.getUniformLocation(prog, "u_radii"),
-    uCount = gl.getUniformLocation(prog, "u_count");
-  const uGlass = gl.getUniformLocation(prog, "u_glass"),
-    uDisp = gl.getUniformLocation(prog, "u_disp"),
-    uOct = gl.getUniformLocation(prog, "u_oct"),
-    uView = gl.getUniformLocation(prog, "u_view");
+  const wPos = W.gl.getAttribLocation(W.prog, "a_pos");
+  W.gl.enableVertexAttribArray(wPos);
+  W.gl.vertexAttribPointer(wPos, 2, W.gl.FLOAT, false, 0, 0);
+  // glass: one quad per slab; every vertex carries its slab's box (pos.xy, center.xy, half-size.xy, radius)
+  const STRIDE = 7 * 4;
+  for (const [name, size, offset] of [
+    ["a_pos", 2, 0],
+    ["a_rect", 4, 8],
+    ["a_radius", 1, 24],
+  ]) {
+    const loc = G.gl.getAttribLocation(G.prog, name);
+    G.gl.enableVertexAttribArray(loc);
+    G.gl.vertexAttribPointer(loc, size, G.gl.FLOAT, false, STRIDE, offset);
+  }
+  G.gl.enable(G.gl.BLEND);
+  G.gl.blendFunc(G.gl.ONE, G.gl.ONE_MINUS_SRC_ALPHA); // premultiplied: neighbouring halos overlap instead of clipping each other
+  G.gl.clearColor(0, 0, 0, 0);
 
   const params = new URLSearchParams(location.search);
   const fixed = params.get("t");
@@ -205,112 +234,143 @@ void main() {
         ? 0.7
         : Math.min(window.devicePixelRatio || 1, 1.0);
   const frameMs = mobile ? 30 : 0;
-  gl.uniform1f(uDisp, 1);
-  gl.uniform1i(uOct, mobile ? 4 : 5);
-  gl.uniform1f(uGlass, 1);
+  for (const C of [W, G]) C.gl.uniform1i(C.u("u_oct"), mobile ? 4 : 5);
+  G.gl.uniform1f(G.u("u_disp"), 1);
+  G.gl.uniform1f(G.u("u_glass"), 1);
+  const wTime = W.u("u_time"),
+    gTime = G.u("u_time"),
+    gOrg = G.u("u_org");
 
-  // The canvas is laid over the whole document and scrolls with it, so the slabs can never trail the
-  // elements. Each frame only the visible part (plus a margin) is shaded via the scissor rect.
   document.body.classList.add("glassgl");
-  const MAXG = 16,
-    rects = new Float32Array(MAXG * 4),
-    radii = new Float32Array(MAXG);
-  let glassEls = [];
+
+  // ---- water canvas: fixed to the viewport ----
+  let vpW = 1,
+    vpH = 1, // CSS px; vpH is the large viewport height
+    wAllocW = 0,
+    wAllocH = 0;
+  const resizeWater = () => {
+    vpW = document.documentElement.clientWidth;
+    vpH = waterCanvas.clientHeight || innerHeight;
+    if (vpW !== wAllocW || vpH !== wAllocH) {
+      wAllocW = vpW;
+      wAllocH = vpH;
+      waterCanvas.width = Math.round(vpW * scale);
+      waterCanvas.height = Math.round(vpH * scale);
+      W.gl.viewport(0, 0, waterCanvas.width, waterCanvas.height);
+    }
+    W.gl.uniform1f(W.u("u_dpr"), waterCanvas.width / vpW);
+    W.gl.uniform2f(W.u("u_vp"), vpW, vpH);
+    W.gl.uniform2f(W.u("u_org"), 0, 0);
+    G.gl.uniform2f(G.u("u_vp"), vpW, vpH);
+  };
+  const drawWater = (t) => {
+    W.gl.uniform1f(wTime, t);
+    W.gl.drawArrays(W.gl.TRIANGLES, 0, 3);
+  };
+
+  // ---- glass canvas: laid over the whole document and scrolls with it, so the slabs can never trail the elements ----
   let sx = 1,
     sy = 1,
     docH = 1,
-    fullFrame = true;
+    glassVerts = 0;
   const docHeight = () =>
     Math.max(document.documentElement.scrollHeight, innerHeight);
   // element boxes in document space, read only when the layout may have changed
   const refreshGlass = () => {
-    glassEls = [...document.querySelectorAll(".glass:not(.primary)")]
-      .map((el) => {
-        const b = el.getBoundingClientRect();
-        return {
-          x: b.left + scrollX,
-          y: b.top + scrollY,
-          w: b.width,
-          h: b.height,
-          r: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0,
-        };
-      })
-      .filter((g) => g.w > 0);
-    let n = 0;
-    for (const g of glassEls) {
-      if (n >= MAXG) break;
-      rects[n * 4] = (g.x + g.w / 2) * sx;
-      rects[n * 4 + 1] = canvas.height - (g.y + g.h / 2) * sy;
-      rects[n * 4 + 2] = (g.w / 2) * sx;
-      rects[n * 4 + 3] = (g.h / 2) * sy;
-      radii[n] = Math.min(g.r, g.w / 2, g.h / 2) * sx;
-      n++;
+    const data = [];
+    const m = 12 * sx; // the halo reaches 10px outside the slab
+    for (const el of document.querySelectorAll(".glass:not(.primary)")) {
+      const b = el.getBoundingClientRect();
+      if (!(b.width > 0)) continue;
+      const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+      const cx = (b.left + scrollX + b.width / 2) * sx,
+        cy = glassCanvas.height - (b.top + scrollY + b.height / 2) * sy,
+        hw = (b.width / 2) * sx,
+        hh = (b.height / 2) * sy,
+        rad = Math.min(r, b.width / 2, b.height / 2) * sx;
+      const x0 = cx - hw - m,
+        x1 = cx + hw + m,
+        y0 = cy - hh - m,
+        y1 = cy + hh + m;
+      for (const [x, y] of [
+        [x0, y0],
+        [x1, y0],
+        [x0, y1],
+        [x0, y1],
+        [x1, y0],
+        [x1, y1],
+      ])
+        data.push(x, y, cx, cy, hw, hh, rad);
     }
-    gl.uniform4fv(uRects, rects);
-    gl.uniform1fv(uRadii, radii);
-    gl.uniform1i(uCount, n);
+    glassVerts = data.length / 7;
+    G.gl.bufferData(
+      G.gl.ARRAY_BUFFER,
+      new Float32Array(data),
+      G.gl.DYNAMIC_DRAW,
+    );
   };
   const MAX_DIM = 8192; // stay well inside canvas size limits on long pages
   let allocW = 0,
     allocH = 0;
-  const resize = () => {
+  const resizeGlass = () => {
     docH = docHeight();
     const w = document.documentElement.clientWidth;
-    canvas.style.height = docH + "px";
-    // Reallocating the bitmap blanks it and forces a repaint of the whole document. On phones the address bar
-    // showing and hiding fires resize on every scroll, so small height changes only re-stretch the existing
-    // bitmap (a few percent, invisible) and repaint the visible band.
+    glassCanvas.style.height = docH + "px";
+    // Reallocating the bitmap forces a repaint of the whole document. On phones the address bar showing and
+    // hiding fires resize on every scroll, so small height changes only re-stretch the existing bitmap
+    // (a few percent, invisible).
     const small = w === allocW && docH <= allocH && docH > allocH * 0.85;
     if (!small) {
       allocW = w;
       allocH = docH;
       const s = Math.min(scale, MAX_DIM / docH);
-      canvas.width = Math.round(w * s);
-      canvas.height = Math.round(docH * s);
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      fullFrame = true; // a resized canvas is blank, so paint all of it once
+      glassCanvas.width = Math.round(w * s);
+      glassCanvas.height = Math.round(docH * s);
+      G.gl.viewport(0, 0, glassCanvas.width, glassCanvas.height);
+      G.gl.uniform2f(G.u("u_res"), glassCanvas.width, glassCanvas.height);
     }
-    sx = canvas.width / w;
-    sy = canvas.height / docH;
-    gl.uniform1f(uDpr, sx);
+    sx = glassCanvas.width / w;
+    sy = glassCanvas.height / docH;
+    G.gl.uniform1f(G.u("u_dpr"), sx);
     refreshGlass();
   };
-
-  const draw = (t) => {
+  // margin: how far beyond the viewport slabs are shaded, in viewport heights. While the page scrolls the canvas is
+  // redrawn every frame or two, so a small band is enough; idle, the band must cover the first frame of a scroll
+  // that starts before the next draw.
+  const drawGlass = (t, margin) => {
+    const gl = G.gl;
     const vh = innerHeight,
       vy = scrollY;
-    const margin = fullFrame ? docH : vh * 0.6; // pre-shade a band around the viewport so fast scrolls never expose a stale row
+    margin = margin === undefined ? docH : vh * margin;
     const y0 = Math.max(0, vy - margin),
       y1 = Math.min(docH, vy + vh + margin);
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(
       0,
-      Math.floor(canvas.height - y1 * sy),
-      canvas.width,
+      Math.floor(glassCanvas.height - y1 * sy),
+      glassCanvas.width,
       Math.ceil((y1 - y0) * sy) + 1,
     );
-    gl.uniform4f(
-      uView,
-      0,
-      canvas.height - (vy + vh) * sy,
-      canvas.width,
-      vh * sy,
-    );
-    gl.uniform1f(uTime, t);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    fullFrame = false;
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(gOrg, 0, glassCanvas.height - (vy + vpH) * sy);
+    gl.uniform1f(gTime, t);
+    gl.drawArrays(gl.TRIANGLES, 0, glassVerts);
+  };
+
+  const resize = () => {
+    resizeWater();
+    resizeGlass();
   };
   // the WebGL buffer is only presented from a frame callback, so even a single frame goes through rAF
   const drawStill = () =>
     requestAnimationFrame(() => {
-      fullFrame = true;
-      draw(stillTime);
+      drawWater(stillTime);
+      drawGlass(stillTime);
     });
 
   resize();
   const relayout = () => {
-    if (docHeight() !== docH || canvas.style.height === "") resize();
+    if (docHeight() !== docH || glassCanvas.style.height === "") resizeGlass();
     else refreshGlass();
     if (still) drawStill();
   };
@@ -330,27 +390,37 @@ void main() {
     return;
   }
 
-// The water keeps moving while the page scrolls: the canvas travels with the content, so nothing can drift.
-// Phones drop to 15 fps during a scroll to leave more of the GPU to the compositor.
-let lastScroll = -1e9;
-addEventListener(
-  "scroll",
-  () => {
-    lastScroll = performance.now();
-  },
-  { passive: true },
-);
-let raf = 0,
-  lastFrame = 0;
-const t0 = performance.now();
-const loop = (now) => {
-  raf = requestAnimationFrame(loop);
-  const scrolling = now - lastScroll < 150;
-  const interval = scrolling && mobile ? 66 : frameMs;
-  if (now - lastFrame < interval) return;
-  lastFrame = now;
-  draw((now - t0) / 1000);
-};
+  // Phones draw the water at 30 fps, 15 fps during a scroll, to leave more of the GPU to the compositor.
+  // The slabs' water is sampled in screen space, so while the page scrolls they are redrawn more often than the
+  // water (every frame on desktop, 30 fps on phones) using the time of the frame the water canvas is showing,
+  // which keeps the pattern continuous across the rim.
+  let lastScroll = -1e9;
+  addEventListener(
+    "scroll",
+    () => {
+      lastScroll = performance.now();
+    },
+    { passive: true },
+  );
+  let raf = 0,
+    lastFrame = 0,
+    lastGlass = 0,
+    shownTime = 0;
+  const t0 = performance.now();
+  const loop = (now) => {
+    raf = requestAnimationFrame(loop);
+    const scrolling = now - lastScroll < 150;
+    const interval = scrolling && mobile ? 66 : frameMs;
+    if (now - lastFrame >= interval) {
+      lastFrame = lastGlass = now;
+      shownTime = (now - t0) / 1000;
+      drawWater(shownTime);
+      drawGlass(shownTime, scrolling ? 0.15 : 0.25);
+    } else if (scrolling && now - lastGlass >= (mobile ? 30 : 0)) {
+      lastGlass = now;
+      drawGlass(shownTime, 0.15);
+    }
+  };
   const start = () => {
     if (!raf) raf = requestAnimationFrame(loop);
   };
