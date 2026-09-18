@@ -202,7 +202,7 @@ void main() {
     fixed !== null
       ? window.devicePixelRatio
       : mobile
-        ? 0.7
+        ? 0.5
         : Math.min(window.devicePixelRatio || 1, 1.0);
   const frameMs = mobile ? 30 : 0;
   gl.uniform1f(uDisp, 1);
