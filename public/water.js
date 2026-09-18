@@ -168,9 +168,13 @@ void main() {
 
   const canvas = document.getElementById("water");
   if (!canvas) return;
+  // preserveDrawingBuffer: rows painted in earlier frames must survive. Without it Chromium blanks everything
+  // outside the scissor rect on every present, and a fast flick into the top or bottom of the page shows a
+  // black strip until the next frame
   const gl = canvas.getContext("webgl", {
     antialias: false,
     alpha: false,
+    preserveDrawingBuffer: true,
     powerPreference: "low-power",
   });
   if (!gl) {
@@ -324,14 +328,15 @@ void main() {
   };
   const MAX_DIM = 8192; // stay well inside canvas size limits on long pages
   let allocW = 0,
-    allocH = 0;
+    allocH = 0,
+    fillAll = false;
   const resize = () => {
     docH = docHeight();
     const w = document.documentElement.clientWidth;
     canvas.style.height = docH + "px";
-    // Reallocating the bitmap blanks it. On phones the address bar showing and hiding fires resize on every
-    // scroll, so small height changes only re-stretch the existing bitmap (a few percent, invisible).
-    // Rows outside the band stay blank: the band is repainted every frame it can matter.
+    // Reallocating the bitmap blanks it, so the next frame paints the whole document. On phones the address
+    // bar showing and hiding fires resize on every scroll, so small height changes only re-stretch the
+    // existing bitmap (a few percent, invisible).
     const small = w === allocW && docH <= allocH && docH > allocH * 0.85;
     if (!small) {
       allocW = w;
@@ -341,6 +346,7 @@ void main() {
       canvas.height = Math.round(docH * s);
       gl.useProgram(S.prog);
       gl.uniform2f(S.u("u_res"), canvas.width, canvas.height);
+      fillAll = true;
     }
     sx = canvas.width / w;
     sy = canvas.height / docH;
@@ -461,10 +467,16 @@ void main() {
     wasScrolling = scrolling;
     if (now - lastFrame < interval && !started) return;
     lastFrame = now;
+    const t = (now - t0) / 1000;
+    if (fillAll) {
+      fillAll = false;
+      paintAll(t);
+      return;
+    }
     const vh = innerHeight,
       vy = scrollY,
       m = vh * (scrolling ? MARGIN_SCROLL : MARGIN_IDLE);
-    paint((now - t0) / 1000, Math.max(0, vy - m), Math.min(docH, vy + vh + m));
+    paint(t, Math.max(0, vy - m), Math.min(docH, vy + vh + m));
   };
   const start = () => {
     if (!raf) raf = requestAnimationFrame(loop);

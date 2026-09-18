@@ -20,6 +20,9 @@
   今のテクスチャはページ座標で、行の対応を描いた時点で固定するので貼り直しがない
 - 模様の縮尺は `100lvh` (アドレスバーを隠した高さ) で決める。`innerHeight` を使うとスマホでバーが隠れる瞬間に
   水面が拡大して見える
+- `#water` の WebGL コンテキストは `preserveDrawingBuffer: true` 必須。無いと Chromium は毎フレーム scissor の
+  外を黒に消すので、速いフリックがページの端に当たった瞬間に未描画の帯が見える。ビットマップを作り直した
+  次のフレームは全面を塗る (`fillAll`)
 - `public/activities.json` は手書き。`thumb` を空にして `pnpm thumbs` で og:image を埋める
 - `mockups/` はデザイン検討時のモック。配信されない。参考にはなるが古い
 
