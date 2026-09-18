@@ -218,8 +218,7 @@ void main() {
   let glassEls = [];
   let sx = 1,
     sy = 1,
-    docH = 1,
-    fullFrame = true;
+    docH = 1;
   const docHeight = () =>
     Math.max(document.documentElement.scrollHeight, innerHeight);
   // element boxes in document space, read only when the layout may have changed
@@ -257,9 +256,10 @@ void main() {
     docH = docHeight();
     const w = document.documentElement.clientWidth;
     canvas.style.height = docH + "px";
-    // Reallocating the bitmap blanks it and forces a repaint of the whole document. On phones the address bar
-    // showing and hiding fires resize on every scroll, so small height changes only re-stretch the existing
-    // bitmap (a few percent, invisible) and repaint the visible band.
+    // Reallocating the bitmap blanks it. On phones the address bar showing and hiding fires resize on every
+    // scroll, so small height changes only re-stretch the existing bitmap (a few percent, invisible).
+    // Rows outside the band stay blank until scrolled near: the band is redrawn every frame anyway, and
+    // Chromium blanks everything outside the scissor rect on each present regardless.
     const small = w === allocW && docH <= allocH && docH > allocH * 0.85;
     if (!small) {
       allocW = w;
@@ -269,7 +269,6 @@ void main() {
       canvas.height = Math.round(docH * s);
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(uRes, canvas.width, canvas.height);
-      fullFrame = true; // a resized canvas is blank, so paint all of it once
     }
     sx = canvas.width / w;
     sy = canvas.height / docH;
@@ -277,10 +276,12 @@ void main() {
     refreshGlass();
   };
 
-  const draw = (t) => {
+  // margin (viewport heights): rows beyond the viewport pre-shaded so a scroll never exposes a stale row before
+  // the next frame. Omitted: the whole document (still frames for screenshots at any scroll position).
+  const draw = (t, margin) => {
     const vh = innerHeight,
       vy = scrollY;
-    const margin = fullFrame ? docH : vh * 0.6; // pre-shade a band around the viewport so fast scrolls never expose a stale row
+    margin = margin === undefined ? docH : vh * margin;
     const y0 = Math.max(0, vy - margin),
       y1 = Math.min(docH, vy + vh + margin);
     gl.enable(gl.SCISSOR_TEST);
@@ -299,14 +300,9 @@ void main() {
     );
     gl.uniform1f(uTime, t);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    fullFrame = false;
   };
   // the WebGL buffer is only presented from a frame callback, so even a single frame goes through rAF
-  const drawStill = () =>
-    requestAnimationFrame(() => {
-      fullFrame = true;
-      draw(stillTime);
-    });
+  const drawStill = () => requestAnimationFrame(() => draw(stillTime));
 
   resize();
   const relayout = () => {
@@ -330,27 +326,32 @@ void main() {
     return;
   }
 
-// The water keeps moving while the page scrolls: the canvas travels with the content, so nothing can drift.
-// Phones drop to 15 fps during a scroll to leave more of the GPU to the compositor.
-let lastScroll = -1e9;
-addEventListener(
-  "scroll",
-  () => {
-    lastScroll = performance.now();
-  },
-  { passive: true },
-);
-let raf = 0,
-  lastFrame = 0;
-const t0 = performance.now();
-const loop = (now) => {
-  raf = requestAnimationFrame(loop);
-  const scrolling = now - lastScroll < 150;
-  const interval = scrolling && mobile ? 66 : frameMs;
-  if (now - lastFrame < interval) return;
-  lastFrame = now;
-  draw((now - t0) / 1000);
-};
+  // The water keeps moving while the page scrolls: the canvas travels with the content, so nothing can drift.
+  // Phones drop to 15 fps during a scroll to leave more of the GPU to the compositor, which is why the band
+  // is wider then (0.6 viewport heights each side covers ~7000 px/s over 66 ms). Idle, the first frame of a
+  // scroll is drawn as soon as its scroll event arrives, so a narrower band is enough.
+  let lastScroll = -1e9;
+  addEventListener(
+    "scroll",
+    () => {
+      lastScroll = performance.now();
+    },
+    { passive: true },
+  );
+  let raf = 0,
+    lastFrame = 0,
+    wasScrolling = false;
+  const t0 = performance.now();
+  const loop = (now) => {
+    raf = requestAnimationFrame(loop);
+    const scrolling = now - lastScroll < 150;
+    const interval = scrolling && mobile ? 66 : frameMs;
+    const started = scrolling && !wasScrolling;
+    wasScrolling = scrolling;
+    if (now - lastFrame < interval && !started) return;
+    lastFrame = now;
+    draw((now - t0) / 1000, scrolling ? 0.6 : 0.3);
+  };
   const start = () => {
     if (!raf) raf = requestAnimationFrame(loop);
   };
