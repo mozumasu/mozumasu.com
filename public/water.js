@@ -153,17 +153,23 @@ void main() {
   } else {
     gcol = frost(toUv(c - lens - dir * bend * k));
   }
-  gcol = mix(gcol, vec3(1.0), 0.07) * 1.02;
-  gcol += pow(rim, 4.0) * (0.25 + 0.75 * max(facing, 0.0)) * 0.7;            // specular on the rim facing the light
-  gcol += pow(rim, 3.0) * max(-facing, 0.0) * 0.35 * vec3(0.9, 1.0, 1.0);    // light leaking through the far edge
-  gcol -= pow(rim, 1.5) * (1.0 - abs(facing)) * 0.06;                        // sides a touch darker
-  float gloss = smoothstep(0.2, 0.55, vpos) * (1.0 - smoothstep(0.7, 0.95, vpos));
-  gcol += gloss * 0.10;                                                       // soft reflection streak near the top
-  // light focused through the slab lands just outside its far edge
-  float halo = (1.0 - smoothstep(0.0, 10.0 * u_dpr, sd)) * step(0.0, sd) * max(-facing, 0.0);
-  // premultiplied: the slab replaces the water, the halo adds to it
+  gcol = mix(gcol, vec3(1.0), 0.10) * 1.03;
+  // light on thick glass: a crisp highlight on the outermost edge, a specular sweep on the lit rim, and a soft
+  // shadow inside the bottom edge where the slab meets the water
+  float edge = 1.0 - smoothstep(0.0, 2.5 * u_dpr, -sd);
+  gcol += edge * (0.30 + 0.5 * max(facing, 0.0));
+  gcol += pow(rim, 5.0) * (0.2 + 0.8 * max(facing, 0.0)) * 0.8;
+  gcol += pow(rim, 3.0) * max(-facing, 0.0) * 0.4 * vec3(0.9, 1.0, 1.0);     // light leaking through the far edge
+  gcol -= pow(rim, 1.5) * (1.0 - abs(facing)) * 0.08;                        // sides a touch darker
+  gcol -= (1.0 - smoothstep(0.0, edgeW * 2.0, -sd)) * (1.0 - rim) * max(-dir.y, 0.0) * 0.10;
+  gcol += smoothstep(-0.3, 1.0, vpos) * 0.10;                                // lit from above: the top is brighter
+  // caustic: light focused through the slab lands just outside its far edge, fringed by dispersion. Every
+  // channel fades out within the 10 px the fragment covers (see the discard above), or it ends in a hard line
+  vec3 hw = vec3(7.5, 8.7, 10.0) * u_dpr;
+  vec3 halo = (1.0 - smoothstep(vec3(0.0), hw, vec3(sd))) * step(0.0, sd) * max(-facing, 0.0);
+  // premultiplied: the slab replaces the water, the caustic adds to it
   float a = cover * u_glass;
-  gl_FragColor = vec4(gcol * a + halo * 0.16 * u_glass * vec3(0.95, 1.0, 1.0), a);
+  gl_FragColor = vec4(gcol * a + halo * 0.2 * u_glass, a);
 }`;
 
   const canvas = document.getElementById("water");
