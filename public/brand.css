@@ -12,7 +12,9 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 /* [hidden] loses to any display rule (e.g. .more { display: flex }), so pin it */
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; }
+/* html keeps a flat color: it is what shows in the overscroll bounce beyond the page. Left unset, body's
+   gradient would propagate there and tile, restarting from its light end as a stripe */
+html { -webkit-text-size-adjust: 100%; background: #3aa8b2; }
 body { min-height: 100svh; overflow-x: hidden; color: var(--ink); font-family: var(--font-m);
   background: linear-gradient(160deg, #8fd9dc 0%, #3aa8b2 45%, #1f8496 100%); }
 a { color: inherit; text-decoration: none; }
